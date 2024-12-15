@@ -159,6 +159,17 @@ def main(
     resume: bool,
     workspace: str | None,
 ):
+    tool_allowlist = ['read',
+                      'search',
+                      'add_plan_details',
+                      "append",
+                      "save",
+                      "patch",
+                      "shell",
+                      "python",
+                      "gh",
+                      "request_to_patch",]
+    show_hidden = True
     """Main entrypoint for the CLI."""
     if version:
         # print version

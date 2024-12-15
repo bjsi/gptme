@@ -19,7 +19,6 @@ from .patch import tool as patch_tool
 from .python import register_function
 from .python import tool as python_tool
 from .rag import tool as rag_tool
-from .read import tool as read_tool
 from .save import tool_append, tool_save
 from .screenshot import tool as screenshot_tool
 from .shell import tool as shell_tool
@@ -27,6 +26,10 @@ from .subagent import tool as subagent_tool
 from .tmux import tool as tmux_tool
 from .vision import tool as vision_tool
 from .youtube import tool as youtube_tool
+from .read import tool as read_tool
+from .plan import tool as plan_tool
+from .search import tool as search_tool
+from .request_patch import tool as request_patch_tool
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +44,6 @@ __all__ = [
     "get_tool_format",
     "set_tool_format",
     # files
-    "read_tool",
     "tool_append",
     "tool_save",
     "patch_tool",
@@ -60,6 +62,10 @@ __all__ = [
     "tmux_tool",
     "browser_tool",
     "youtube_tool",
+    "read_tool",
+    "plan_tool",
+    "search_tool",
+    "request_patch_tool",
 ]
 
 loaded_tools: list[ToolSpec] = []
@@ -80,6 +86,7 @@ def init_tools(allowlist: frozenset[str] | None = None) -> None:
         sorted(ToolSpec.get_tools().values(), key=lambda tool: tool.name != "python")
     )
     loaded_tool_names = [tool.name for tool in loaded_tools]
+    print(f"loaded_tool_names: {loaded_tool_names}")
     for tool in tools:
         if tool.name in loaded_tool_names:
             continue

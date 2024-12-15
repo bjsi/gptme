@@ -1,27 +1,49 @@
-"""
-Read the contents of a file.
-"""
+import os
+from typing import Optional
+from gptme.tools.base import ToolSpec, ToolUse
+from gptme.tools.file_context import FileContext
 
-from . import ToolSpec, ToolUse
 
 instructions = (
-    "Read the content of the given file. Use the `cat` command with the `shell` tool."
+    "Read the content of the given file. The `read` tool takes optional arguments to expand the context of the file. Only expand the context you need to complete the current task. For specialized queries, use the `query` parameter with a tree-sitter query."
 )
 
+def read(fp: str, lines: Optional[list[int]] = None, query: Optional[str] = None, names: Optional[list[str]] = None):
+   file_ext = os.path.splitext(fp)[1]
+   if file_ext != ".py": return open(fp, "r").read() # just cat non-python files
+   ctx = FileContext(fp)
+   if not lines and not query and not names: ctx.show_skeleton()
+   elif lines: ctx.show(lines=lines, scope="full", parents="all")
+   elif query: ctx.show(query=query, scope="full", parents="all")
+   elif names: ctx.show(names=names, scope="full", parents="all")
+   return ctx.stringify()
 
 def examples(tool_format):
     return f"""
-> User: read file.txt
-> Assistant:
-{ToolUse("shell", [], "cat file.txt").to_output(tool_format)}
+> User: read file.py
+> Assistant: Certainly! Here is the content of file.py:
+{ToolUse("ipython", [], "read('file.py')").to_output(tool_format)}
+
+> User: read file.py, focusing on lines of interest 20, 25 and 30.
+> Assistant: Certainly! Here is the content of file.py, focusing on and giving context to the function definition at line 20:
+{ToolUse("ipython", [], "read('file.py', lines=[20, 25, 30])").to_output(tool_format)}
+
+> User: read file.py, focusing on the "run" and "save" methods.
+> Assistant: Certainly! Here is the content of file.py, focusing on and giving context to the "run" and "save" methods:
+{ToolUse("ipython", [], "read('file.py', names=['run', 'save'])").to_output(tool_format)}
+
+> User: find everywhere in file.py where the "run" method is called.
+> Assistant: Certainly! Here is the content of file.py, focusing on everywhere the "run" method is called using a tree-sitter query:
+{ToolUse("ipython", [], "read('file.py', query='(call function: [(identifier) @func.name (attribute attribute: (identifier) @func.name)] (#eq? @func.name \"run\")) @call'").to_output(tool_format)}
 """.strip()
 
-
-# Note: this isn't actually a tool, it only serves prompting purposes
 tool = ToolSpec(
     name="read",
-    desc="Read the content of a file",
+    desc="Read content from a file.",
     instructions=instructions,
     examples=examples,
+    functions=[read]
 )
-__doc__ = tool.get_doc(__doc__)
+
+if __name__ == "__main__":
+    print(read("./hello.py", lines=[14]))

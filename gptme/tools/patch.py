@@ -27,6 +27,7 @@ Try to keep the patch as small as possible. Avoid placeholders, as they may make
 
 To keep the patch small, try to scope the patch to imports/function/class.
 If the patch is large, consider using the save tool to rewrite the whole file.
+NOTE: Before using this tool, you must request a patch using the `request_to_patch` ipython tool in the previous message.
 """.strip()
 
 instructions_format = {
@@ -61,14 +62,18 @@ patch_content = """
 
 def examples(tool_format):
     return f"""
-> User: patch `src/hello.py` to ask for the name of the user
+> User: patch the hello function in `src/hello.py` to ask for the name of the user.
+> Assistant: Certainly! I'll patch the file:
+{ToolUse("patch", ["src/hello.py"], patch_content).to_output(tool_format)}
+> System: You must first request a patch using the `request_to_patch` ipython tool.
+> Assistant: Certainly! I'll use ipython to request a patch first:
+{ToolUse("ipython", [], "request_to_patch('src/hello.py', line_range=(1, 2))").to_output(tool_format)}
+> System: Approved. Apply the patch after confirming the region is correct:
 ```src/hello.py
 def hello():
     print("Hello world")
-
-if __name__ == "__main__":
-    hello()
 ```
+> Assistant: Now I'll apply the patch:
 > Assistant:
 {ToolUse("patch", ["src/hello.py"], patch_content).to_output(tool_format)}
 > System: Patch applied
@@ -276,6 +281,12 @@ tool = ToolSpec(
             name="patch",
             type="string",
             description="The patch to apply.",
+            required=True,
+        ),
+        Parameter(
+            name="key",
+            type="string",
+            description="The key to use to verify access to the patch acquired from the `request_to_patch` ipython tool.",
             required=True,
         ),
     ],

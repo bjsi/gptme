@@ -78,7 +78,6 @@ def prompt_short(
         yield from prompt_user()
     yield from prompt_project()
 
-
 def prompt_gptme(interactive: bool) -> Generator[Message, None, None]:
     """
     Base system prompt for gptme.
