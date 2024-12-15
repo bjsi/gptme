@@ -1,12 +1,9 @@
-from typing import Union
-import uuid
-
 from gptme.tools.base import ToolSpec, ToolUse
 from gptme.tools.file_context import FileContext
 
 
 instructions = (
-    "Request access to the patch tool to be apply a patch to a file. It's better to patch smaller regions at a time."
+    "Request access to the patch tool to be apply a patch to a file. Make your changes as small as possible. It's better to patch a small region consisting of a single function instead of large regions."
 )
 
 def request_to_patch(file_path: str, line_range: tuple[int, int]) -> str:

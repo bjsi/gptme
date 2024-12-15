@@ -76,7 +76,7 @@ def hello():
 > Assistant: Now I'll apply the patch:
 > Assistant:
 {ToolUse("patch", ["src/hello.py"], patch_content).to_output(tool_format)}
-> System: Patch applied
+> System: Patch applied. If possible, run tests to verify the new behavior.
 """.strip()
 
 
@@ -225,7 +225,7 @@ def execute_patch_impl(
 
         # Return success message with any warnings
         warnings_str = ("\n".join(warnings) + "\n") if warnings else ""
-        yield Message("system", f"{warnings_str}Patch successfully applied to {path}")
+        yield Message("system", f"{warnings_str}Patch successfully applied to {path}. If possible, run tests to verify the new behavior.")
 
     except FileNotFoundError:
         raise ValueError(

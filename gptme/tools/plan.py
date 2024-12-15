@@ -72,36 +72,3 @@ tool = ToolSpec(
     desc="Write up an implementation plan for a specific issue inline in the codebase. Do this last after you've searched and read the codebase.",
     functions=[add_plan_details],
 )
-
-if __name__ == "__main__":
-    repo_map = get_plan()
-    add_plan_details({
-    'gptme/tools/shell.py': {
-        149: '# TODO: Modify split_commands function to preserve heredoc syntax',
-        165: '# TODO: Remove delimiter for heredoc commands',
-        166: '# TODO: Implement multi-line command handling',
-        185: '# TODO: Implement heredoc-aware command completion detection',
-        419: '''
-        # TODO: Update split_commands to handle heredoc syntax
-        # - Detect start of heredoc (<<, <<-, <<< operators)
-        # - Preserve heredoc content until end delimiter is found
-        # - Return commands as a list of potentially multi-line strings
-        '''
-    },
-    'tests/test_shell.py': {
-        28: '''
-        # TODO: Expand test_echo_multiline to include heredoc syntax
-        # - Test basic heredoc (<<)
-        # - Test stripped heredoc (<<-)
-        # - Test here-string (<<<)
-        ''',
-        96: '''
-        # TODO: Add new test for complex heredoc scenarios
-        def test_heredoc_complex():
-            # Test nested heredocs
-            # Test heredoc with variable substitution
-            # Test heredoc in a pipeline
-        '''
-    }
-})
-    print(repo_map.stringify(comment_prefix=" TODO(jake|issue:108):"))

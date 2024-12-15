@@ -5,7 +5,7 @@ from gptme.tools.file_context import FileContext
 
 
 instructions = (
-    "Read the content of the given file. The `read` tool takes optional arguments to expand the context of the file. Only expand the context you need to complete the current task. For specialized queries, use the `query` parameter with a tree-sitter query."
+    "Read the content of the given file. The `read` tool takes optional arguments to expand the context of the file. For specialized queries, use the `query` parameter with a tree-sitter query."
 )
 
 def read(fp: str, lines: Optional[list[int]] = None, query: Optional[str] = None, names: Optional[list[str]] = None):
@@ -16,7 +16,8 @@ def read(fp: str, lines: Optional[list[int]] = None, query: Optional[str] = None
    elif lines: ctx.show(lines=lines, scope="full", parents="all")
    elif query: ctx.show(query=query, scope="full", parents="all")
    elif names: ctx.show(names=names, scope="full", parents="all")
-   return ctx.stringify()
+   ctx_string = ctx.stringify()
+   return f"{fp}\n{ctx_string}\n\n Use further calls to `read` to expand more context if required."
 
 def examples(tool_format):
     return f"""
@@ -44,6 +45,3 @@ tool = ToolSpec(
     examples=examples,
     functions=[read]
 )
-
-if __name__ == "__main__":
-    print(read("./hello.py", lines=[14]))
