@@ -14,7 +14,6 @@ from .base import (
     ToolUse,
     get_path,
 )
-from .patch import Patch
 
 instructions = """
 Create or overwrite a file with the given content.

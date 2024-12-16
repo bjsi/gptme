@@ -162,6 +162,7 @@ class ToolSpec:
         execute: An optional function that is called when the tool executes a block.
         block_types: A list of block types that the tool will execute.
         available: Whether the tool is available for use.
+        parse_args: An optional function that is called to parse the arguments of the tool.
     """
 
     name: str
@@ -175,6 +176,7 @@ class ToolSpec:
     block_types: list[str] = field(default_factory=list)
     available: bool = True
     parameters: list[Parameter] = field(default_factory=list)
+    parse_args: Callable[[str], Any] | None = None
 
     def __post_init__(self):
         global _tools
@@ -324,7 +326,9 @@ class ToolUse:
         if tool := get_tool_for_langtag(codeblock.lang):
             # NOTE: special case
             args = (
-                codeblock.lang.split(" ")[1:]
+                tool.parse_args(codeblock.lang)
+                if tool.parse_args
+                else codeblock.lang.split(" ")[1:]
                 if tool.name != "save"
                 else [codeblock.lang]
             )

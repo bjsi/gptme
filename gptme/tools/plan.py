@@ -1,6 +1,6 @@
 from typing import Dict
 from gptme.tools.base import ToolSpec, ToolUse
-from gptme.tools.file_context import FileContext
+from gptme.tools.file_ctx import FileContext
 
 
 class Plan:

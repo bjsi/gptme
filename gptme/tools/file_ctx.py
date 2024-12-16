@@ -87,8 +87,9 @@ class FileContext:
         elif query: nodes = self.query(query)
         elif names: nodes = self.query(self.definition_query("|".join(names)))
         elif line_range:
-            nodes = [self.node_for_line(line, definition = True) for line in range(line_range[0], line_range[1] + 1)]
-            scope = "full"
+            nodes = [self.node_for_line(line) for line in range(line_range[0], line_range[1] + 1)]
+            self.show_indices.update(range(line_range[0], line_range[1] + 1))
+            # scope = "full"
         else: print("No line, name or definition provided"); return self
         for node in nodes:
             if scope == "full": self.show_indices.update(range(node.start_point[0], node.end_point[0] + 1))
@@ -157,6 +158,5 @@ class FileContext:
 
 if __name__ == "__main__":
     context = FileContext("hello.py")
-    context.show_skeleton()
-    context.add_comments({8: "This is a virtual comment\ntesting multiline\ntesting testing"})
+    context.show(line_range=(15, 21), scope="line", parents="none")
     print(context.stringify(comment_prefix=" TODO(james|issue#123):"))

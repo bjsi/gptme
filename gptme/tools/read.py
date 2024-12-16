@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 from gptme.tools.base import ToolSpec, ToolUse
-from gptme.tools.file_context import FileContext
+from gptme.tools.file_ctx import FileContext
 
 
 instructions = (

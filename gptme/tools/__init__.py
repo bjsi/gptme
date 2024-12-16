@@ -29,7 +29,6 @@ from .youtube import tool as youtube_tool
 from .read import tool as read_tool
 from .plan import tool as plan_tool
 from .search import tool as search_tool
-from .request_patch import tool as request_patch_tool
 
 logger = logging.getLogger(__name__)
 

@@ -167,8 +167,7 @@ def main(
                       "patch",
                       "shell",
                       "python",
-                      "gh",
-                      "request_to_patch",]
+                      "gh"]
     show_hidden = True
     """Main entrypoint for the CLI."""
     if version:
