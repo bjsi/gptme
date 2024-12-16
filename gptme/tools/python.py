@@ -206,7 +206,7 @@ Available functions:
 
 
 tool = ToolSpec(
-    name="python",
+    name="ipython",
     desc="Execute Python code",
     instructions=instructions,
     examples=examples,

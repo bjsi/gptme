@@ -1,17 +1,20 @@
 import subprocess
 from gptme.tools import ToolSpec, ToolUse
 
-instructions = "Use this tool to search the contents of files in the codebase. You can specify a directory to search in, otherwise the current directory is used."
+instructions = "Use this tool to search the contents of files in the codebase. This is useful for finding the definition of a class, function, or variable."
 
 
 def examples(tool_format):
     return f"""
-> User: search for occurrences of 'document' in the current directory
+> User: search for occurrences of 'def run' in the current directory
 > Assistant:
-{ToolUse("ipython", [], "search('document')").to_output(tool_format)}
+{ToolUse("ipython", [], "search('def run')").to_output(tool_format)}
 > User: search for occurrences of 'run' or 'save' in the test directory
 > Assistant:
 {ToolUse("ipython", [], "search('run|save', 'test')").to_output(tool_format)}
+> User: search for the definition of the Mail class
+> Assistant:
+{ToolUse("ipython", [], "search('class Mail')").to_output(tool_format)}
 """.strip()
 
 def search(query: str, directory: str = "."):

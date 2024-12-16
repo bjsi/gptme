@@ -161,12 +161,10 @@ def main(
 ):
     tool_allowlist = ['read',
                       'search',
-                      'add_plan_details',
-                      "append",
-                      "save",
+                      #'add_plan_details',
                       "patch",
                       "shell",
-                      "python",
+                      "ipython",
                       "gh"]
     show_hidden = True
     """Main entrypoint for the CLI."""
