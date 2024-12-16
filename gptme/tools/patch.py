@@ -96,8 +96,7 @@ def request_to_patch(file_path: str, region: tuple[int, int], patch_description:
     return f"""
 Approved '{patch_description}' within region:
 {patch_region}
-Are you sure about your intended change? If not, consider an alternative approach.
-{"NOTE: If you are not intending to overwrite this line you should include it in your patch." if add_note else ""}
+Are you sure about your intended change? If not, consider an alternative approach. NOTE: If you are not intending to overwrite lines you should include them in your patch.
 """.strip()
 
 
