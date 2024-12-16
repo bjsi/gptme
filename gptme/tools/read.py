@@ -6,13 +6,13 @@ from gptme.tools.file_ctx import FileContext
 
 instructions = "Read the content of the given file. The `read` tool takes optional `line_range` or `names` arguments to expand the context of the file."
 
-def read(fp: str, lines: Optional[list[int]] = None, query: Optional[str] = None, names: Optional[list[str]] = None):
+def read(fp: str, line_range: Optional[list[int]] = None, query: Optional[str] = None, names: Optional[list[str]] = None):
    file_ext = os.path.splitext(fp)[1]
    if file_ext != ".py": return open(fp, "r").read() # just cat non-python files
    ctx = FileContext(fp)
-   ctx.show_skeleton() # always include skeleton
-   if not lines and not query and not names: ctx.show_skeleton()
-   elif lines: ctx.show(lines=lines, scope="full", parents="all")
+   ctx = ctx.show_skeleton() # always include skeleton
+   if not line_range and not query and not names: ctx.show_skeleton()
+   elif line_range: ctx.show(line_range=line_range, scope="full", parents="all")
    elif query: ctx.show(query=query, scope="full", parents="all") # not documneted
    elif names: ctx.show(names=names, scope="full", parents="all")
    ctx_string = ctx.stringify()

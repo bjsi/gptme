@@ -5,6 +5,8 @@ Gives the LLM agent the ability to patch text files, by using a adapted version 
 from collections.abc import Generator
 import difflib
 from pathlib import Path
+import subprocess
+from typing import List, NamedTuple
 
 from gptme.tools.file_ctx import FileContext
 
@@ -15,8 +17,8 @@ from gptme.message import Message
 instructions = """
 This can be used to edit files, without having to rewrite the whole file.
 Keep the patch as small as possible.
-The patch tool overwrites lines!!! If you don't want to overwrite lines, include them in your patch.
-NOTE: Before submitting a patch, you must request permission to patch using the `request_to_patch` ipython tool in the previous message.
+If the patch region overlaps with existing code, it will overwrite the existing code. Include those lines in your patch if you want to keep them.
+Before submitting a patch, request permission to patch using the `request_to_patch` ipython tool in the previous message.
 """.strip()
 
 patch_content1 = """
@@ -72,15 +74,77 @@ def diff_minimal(original: str, updated: str, strip_context=False) -> str:
         diff = diff[start : len(diff) - end]
     return "\n".join(diff)
 
-def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
-    file_content = open(file_path).read()
-    file_lines = file_content.splitlines()
-    start, end = region
-    file_lines[start-1:end] = patch.splitlines()
-    with open(file_path, "w") as file:
-        file.write("\n".join(file_lines))
-    yield Message("system", f"Patch applied.")
+class LintError(NamedTuple):
+    line: int
+    message: str
 
+def parse_pylint_error(error_line: str) -> LintError | None:
+    """Parse a pylint error line to extract line number and message."""
+    try:
+        # Pylint format is typically: "file.py:line_num: [error_code] message"
+        parts = error_line.split(':', 2)
+        if len(parts) >= 3:
+            line_num = int(parts[1])
+            message = parts[2].strip()
+            return LintError(line_num, message)
+    except (ValueError, IndexError):
+        pass
+    return None
+
+def run_pylint_errors(file_path: str | Path) -> List[LintError]:
+    """Run pylint on a file and return only errors within specified region."""
+    try:
+        result = subprocess.run(
+            ['pylint', 
+             '--disable=all',  # Disable all checks first
+             '--enable=E,F',   # Enable only errors (E) and fatal errors (F)
+             str(file_path)],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        errors = []
+        for line in result.stdout.splitlines():
+            if error := parse_pylint_error(line):
+                errors.append(error)
+        return errors
+    except FileNotFoundError:
+        return []
+
+def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
+    # Convert to Path object if string
+    file_path = Path(file_path)
+    start, end = region
+    
+    # Run pylint before patch
+    before_lint = run_pylint_errors(file_path)
+    
+    # Apply the patch
+    original = open(file_path).read()
+    original_lines = original.splitlines()
+    updated_lines = original_lines[:]
+    updated_lines[start-1:end] = patch.splitlines()
+    
+    # Write the patched content
+    with open(file_path, "w") as file:
+        file.write("\n".join(updated_lines))
+    
+    # Run pylint after patch
+    after_lint = run_pylint_errors(file_path)
+    
+    # Filter errors to only those in the patched region
+    before_errors = {err for err in before_lint if start <= err.line <= end}
+    after_errors = {err for err in after_lint if start <= err.line <= end}
+    
+    # Find new errors that weren't present before
+    new_errors = after_errors - before_errors
+    
+    if new_errors:
+        yield Message("system", "⚠️ Warning: New errors introduced in patched region:")
+        for error in sorted(new_errors):
+            yield Message("system", f"  Line {error.line}: {error.message}")
+    
+    yield Message("system", f"Patch applied.")
 
 # fake - just to force it to read the section before patching
 _requested = False
@@ -97,8 +161,7 @@ def request_to_patch(file_path: str, region: tuple[int, int], patch_description:
     return f"""
 Approved '{patch_description}' within region:
 {patch_region}
-1) Is this the correct change? If not, retry.
-2) Is this the correct region? If not, retry.
+Is this the correct region? If not, use `search` or `read` to find the correct region.
 """.strip()
 
 
@@ -157,3 +220,4 @@ __doc__ = tool.get_doc(__doc__)
 
 if __name__ == "__main__":
     print(request_to_patch("hello.py", region=(11, 14), patch_description="Add a prompt for the user's name"))
+    print(run_pylint_errors("hello.py"))
