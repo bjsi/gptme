@@ -15,6 +15,7 @@ from gptme.message import Message
 instructions = """
 This can be used to edit files, without having to rewrite the whole file.
 Keep the patch as small as possible.
+The patch tool overwrites lines!!! If you don't want to overwrite lines, include them in your patch.
 NOTE: Before submitting a patch, you must request permission to patch using the `request_to_patch` ipython tool in the previous message.
 """.strip()
 
@@ -98,7 +99,6 @@ Approved '{patch_description}' within region:
 {patch_region}
 1) Is this the correct change? If not, retry.
 2) Is this the correct region? If not, retry.
-3) If you are not intending to overwrite lines you should include them in your patch.
 """.strip()
 
 
