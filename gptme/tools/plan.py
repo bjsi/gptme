@@ -39,7 +39,7 @@ def add_plan_details(file_line_comment_map: Dict[str, Dict[int, str]]):
     get_plan().write_plan(updated_map)
 
 def print_implementation_plan(issue_number: int):
-    print(get_plan().stringify(issue_number))
+    print(get_plan().stringify(f" TODO(jake|{issue_number}):"))
 
 instructions = """Write up an implementation plan for a specific issue by adding inline comments in the codebase."""
 
@@ -72,3 +72,36 @@ tool = ToolSpec(
     desc="Write up an implementation plan for a specific issue inline in the codebase. Do this last after you've searched and read the codebase.",
     functions=[add_plan_details],
 )
+
+if __name__ == "__main__":
+    add_plan_details({
+        'gptme/cli.py': {
+            159: """
+            # Modify the main function to handle piped input with resume option
+            1. Move the stdin checking logic before the resume check
+            2. Store piped input in a variable instead of immediately adding to initial_msgs
+            3. Update the resume logic to append piped input and new prompts to the resumed conversation
+            """,
+            248: """
+            # Update the resume logic
+            1. Call get_logdir_resume() to get both logdir and previous messages
+            2. Append piped input (if any) to the previous messages
+            3. Append new prompts to the previous messages
+            4. Use the combined messages for the rest of the function
+            """,
+            378: """
+            # Modify get_logdir_resume to return both logdir and previous messages
+            1. Load the previous conversation
+            2. Return a tuple containing the logdir and the loaded messages
+            """,
+        },
+        'tests/test_cli.py': {
+            1: """
+            # Add new test cases
+            1. Test resuming a conversation with piped input
+            2. Test resuming a conversation with piped input and new prompts
+            3. Test resuming a conversation without piped input but with new prompts
+            """
+        }
+    })
+    print_implementation_plan(202)

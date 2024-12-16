@@ -1,16 +1,195 @@
-You are a code implementation planner. There are three parts to your job.
+Good morning Jake, your task is to implement the solution to the following issue: https://github.com/ErikBjare/gptme/issues/202.
+Use `gh issue view` to get details about the issue, then use the plan below to guide your implementation.
+Use `search` and `read` tools if you need to gather additional context about the codebase.
+When implementing the solution, you should follow this process:
 
-# 1. Research
-- Gather the context required to draft a solution to the following issue: https://github.com/ErikBjare/gptme/issues/108
-- Get details about the issue using `gh issue view` and use `search` and `read` tools to build an understanding of the relevant parts of the codebase. Prefer `read` over `cat`.
-- Examine each relevant function and related test in detail, expanding context with `read` as you go to understand the problem.
-- Search the codebase for tests that may be affected or need to be added with your proposed changes.
+# 1. Make a small, testable change to the codebase.
+- Make a small testable change to the codebase. To make your code easily testable, consider implementing changes as new functions.
+- Create a new test to verify the specific change you made.
+- Run the tests and make sure they pass. Do not move on to the next step until the tests pass.
+- Repeat these steps until you have implemented the entire solution.
 
-# 2. Draft implementation
-- Implement a simplified version of the solution in a draft.py file.
-- The draft implementation should be a minimal working example that demonstrates the solution.
-- The draft implementation must contain tests that verify your solution.
+# 2. Final Test Run
+- Run all tests you added to verify the solution.
+- Run any relevant tests in the codebase to verify the solution.
 
-# 3. Plan Writing
-- Once you have a working draft implementation, write a plan for the exact changes needed in the codebase.
-- Write the implementation plan as step-by-step bullet points on the relevant parts of the code, including test files, using the `add_plan_details` tool.
+----------------------------------------------------------------------------------------------------
+gptme/cli.py
+  1│import importlib.metadata
+...⋮...
+ 58│@click.command(help=docstring)
+...⋮...
+146│def main(
+147│    prompts: list[str],
+148│    prompt_system: str,
+149│    name: str,
+150│    model: str | None,
+151│    tool_allowlist: list[str] | None,
+152│    tool_format: ToolFormat,
+153│    stream: bool,
+154│    verbose: bool,
+155│    no_confirm: bool,
+156│    interactive: bool,
+157│    show_hidden: bool,
+158│    version: bool,
+   │    # TODO(jake|202): Modify the main function to handle piped input with resume option
+   │    # 1. Move the stdin checking logic before the resume check
+   │    # 2. Store piped input in a variable instead of immediately adding to initial_msgs
+   │    # 3. Update the resume logic to append piped input and new prompts to the resumed conversation
+159│    resume: bool,
+160│    workspace: str | None,
+161│):
+162│    tool_allowlist = ['read',
+163│                      'search',
+164│                      'add_plan_details',
+165│                      "append",
+166│                      "save",
+167│                      "patch",
+168│                      "shell",
+169│                      "python",
+170│                      "gh"]
+171│    show_hidden = True
+172│    """Main entrypoint for the CLI."""
+173│    if version:
+174│        # print version
+175│        print(f"gptme {importlib.metadata.version('gptme')}")
+176│
+177│        # print dirs
+178│        print(f"Logs dir: {get_logs_dir()}")
+179│
+180│        exit(0)
+181│
+182│    if "PYTEST_CURRENT_TEST" in os.environ:
+183│        interactive = False
+184│
+185│    # init logging
+186│    init_logging(verbose)
+187│
+188│    if not interactive:
+189│        no_confirm = True
+190│
+191│    if no_confirm:
+192│        logger.warning("Skipping all confirmation prompts.")
+193│
+194│    if tool_allowlist:
+195│        # split comma-separated values
+196│        tool_allowlist = [tool for tools in tool_allowlist for tool in tools.split(",")]
+197│
+198│    config = get_config()
+199│
+200│    tool_format = tool_format or config.get_env("TOOL_FORMAT") or "markdown"
+201│    set_tool_format(tool_format)
+202│
+203│    # early init tools to generate system prompt
+204│    init_tools(frozenset(tool_allowlist) if tool_allowlist else None)
+205│
+206│    # get initial system prompt
+207│    initial_msgs = [
+208│        get_prompt(
+209│            prompt_system,
+210│            interactive=interactive,
+211│            tool_format=tool_format,
+212│        )
+213│    ]
+214│
+215│    # if stdin is not a tty, we might be getting piped input, which we should include in the prompt
+216│    was_piped = False
+217│    if not sys.stdin.isatty():
+218│        # fetch prompt from stdin
+219│        prompt_stdin = _read_stdin()
+220│        if prompt_stdin:
+221│            # TODO: also append if existing convo loaded/resumed
+222│            initial_msgs += [Message("system", f"```stdin\n{prompt_stdin}\n```")]
+223│            was_piped = True
+224│
+225│            # Attempt to switch to interactive mode
+226│            sys.stdin.close()
+227│            try:
+228│                sys.stdin = open("/dev/tty")
+229│            except OSError:
+230│                # if we can't open /dev/tty, we're probably in a CI environment, so we should just continue
+231│                logger.warning(
+232│                    "Failed to switch to interactive mode, continuing in non-interactive mode"
+233│                )
+234│
+235│    # add prompts to readline history
+236│    for prompt in prompts:
+237│        if prompt and len(prompt) > 1000:
+238│            # skip adding long prompts to history (slows down startup, unlikely to be useful)
+239│            continue
+240│        add_history(prompt)
+241│
+242│    # join prompts, grouped by `-` if present, since that's the separator for "chained"/multiple-round prompts
+243│    sep = "\n\n" + MULTIPROMPT_SEPARATOR
+244│    prompts = [p.strip() for p in "\n\n".join(prompts).split(sep) if p]
+245│    # TODO: referenced file paths in multiprompts should be read when run, not when parsed
+246│    prompt_msgs = [Message("user", p) for p in prompts]
+247│
+   │    # TODO(jake|202): Update the resume logic
+   │    # 1. Call get_logdir_resume() to get both logdir and previous messages
+   │    # 2. Append piped input (if any) to the previous messages
+   │    # 3. Append new prompts to the previous messages
+   │    # 4. Use the combined messages for the rest of the function
+248│    if resume:
+249│        logdir = get_logdir_resume()
+250│    # don't run pick in tests/non-interactive mode, or if the user specifies a name
+251│    elif (
+252│        interactive
+253│        and name == "random"
+254│        and not prompt_msgs
+255│        and not was_piped
+256│        and sys.stdin.isatty()
+257│    ):
+258│        logdir = pick_log()
+259│    else:
+260│        logdir = get_logdir(name)
+261│
+262│    if workspace == "@log":
+263│        workspace_path: Path | None = logdir / "workspace"
+264│        assert workspace_path  # mypy not smart enough to see its not None
+265│        workspace_path.mkdir(parents=True, exist_ok=True)
+266│    else:
+267│        workspace_path = Path(workspace) if workspace else None
+268│
+269│    # register a handler for Ctrl-C
+270│    set_interruptible()  # prepare, user should be able to Ctrl+C until user prompt ready
+271│    signal.signal(signal.SIGINT, handle_keyboard_interrupt)
+272│
+273│    try:
+274│        chat(
+275│            prompt_msgs,
+276│            initial_msgs,
+277│            logdir,
+278│            model,
+279│            stream,
+280│            no_confirm,
+281│            interactive,
+282│            show_hidden,
+283│            workspace_path,
+284│            tool_allowlist,
+285│            tool_format,
+286│        )
+287│    except RuntimeError as e:
+288│        logger.error(e)
+289│        sys.exit(1)
+...⋮...
+   │# TODO(jake|202): Modify get_logdir_resume to return both logdir and previous messages
+   │# 1. Load the previous conversation
+   │# 2. Return a tuple containing the logdir and the loaded messages
+378│def get_logdir_resume() -> Path:
+379│    if conv := next(get_user_conversations(), None):
+380│        return Path(conv.path).parent
+381│    else:
+382│        raise ValueError("No previous conversations to resume")
+...⋮...
+395│    return all_data
+
+----------------------------------------------------------------------------------------------------
+tests/test_cli.py
+   │# TODO(jake|202): Add new test cases
+   │# 1. Test resuming a conversation with piped input
+   │# 2. Test resuming a conversation with piped input and new prompts
+   │# 3. Test resuming a conversation without piped input but with new prompts
+  1│import importlib
+...⋮...
+403│        assert not_expect not in result.output

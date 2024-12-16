@@ -38,6 +38,9 @@ class FileContext:
     def definition_query(self, name: Optional[str] = None):
         return f"{self.function_query(name)}\n{self.class_query(name)}\n{self.assignment_query(name)}"
 
+    def import_query(self):
+        return f"(import_statement name: (identifier) @name.definition.import)"
+
     def is_definition(self, node: Node):
         return node.type in ["function_definition", "class_definition", "assignment"]
 
@@ -77,6 +80,7 @@ class FileContext:
         names: Optional[list[str]] = None,
         scope: Literal["full", "line"] = "line",
         parents: Literal["none", "all"] = "none",
+        last_line: bool = True,
     ):
         if lines:
             # force full scope and nearest definition node - after a fuzzy search or RAG
@@ -98,10 +102,12 @@ class FileContext:
                 while node.parent:
                     self.show_indices.add(node.parent.start_point[0])
                     node = node.parent
+        if last_line: self.show_indices.add(len(self.lines) - 1)
         return self
     
     def show_skeleton(self):
         self.show(query=f"{self.function_query()}\n{self.class_query()}", scope="line", parents="none")
+        self.show(query=self.import_query(), scope="full", parents="none")
         return self
     
     def merge(self, other: "FileContext"):
