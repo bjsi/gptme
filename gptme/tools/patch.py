@@ -60,7 +60,7 @@ add 'src/hello.py'
 
 > User: Actually, I don't want to patch that file.
 > Assistant: Okay, I'll revert to the previous commit.
-{ToolUse("revert_to", ["c1c1e01~1"]).to_output(tool_format)}
+{ToolUse("ipython", [], "revert_to('c1c1e01~1')").to_output(tool_format)}
 > System: Patch reverted.
 
 > User: create a new file `ideas.txt` with a TODO list.
