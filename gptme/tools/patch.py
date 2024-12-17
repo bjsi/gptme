@@ -166,6 +166,7 @@ def revert_to(hash: str) -> Message:
     current_hash = subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
     subprocess.run(["git", "checkout", hash], check=True, capture_output=True, text=True).stdout
     diff = subprocess.run(["git", "diff", current_hash], check=True, capture_output=True, text=True).stdout
+    # subprocess.run(["git", "reset", "--hard", hash], check=True, capture_output=True, text=True).stdout
     output = subprocess.run(["git", "log", "-n", "1", "--oneline"], check=True, capture_output=True, text=True).stdout
     return Message("system", f"Reverted to {output}\n{diff}")
 
@@ -244,4 +245,4 @@ __doc__ = tool.get_doc(__doc__)
 if __name__ == "__main__":
     print("shdasoidsand")
     print("hi")
-    print(revert_to('0623c3e8be4cb').message)
+    print(revert_to('0623c3e8be4cb').content)
