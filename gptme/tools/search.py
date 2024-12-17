@@ -19,7 +19,8 @@ def examples(tool_format):
 
 def search(query: str, directory: str = "."):
     res = subprocess.run(["rga", "--line-number", "--context", "2", "--heading", "-e", query, directory], capture_output=True, text=True)
-    return res.stdout
+    results = res.stdout
+    return f"{results}\nYou can get more context by using the `read` tool with a line_range parameter."
 
 tool = ToolSpec(
     name="search",

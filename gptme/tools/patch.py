@@ -54,24 +54,12 @@ Are you sure about your intended change? If not, consider an alternative approac
 """.strip()
 
 
-def diff_minimal(original: str, updated: str, strip_context=False) -> str:
+def diff_minimal(original: str, updated: str) -> str:
     """
     Show a minimal diff of the patch.
     Note that a minimal diff isn't necessarily a unique diff.
     """
     diff = list(difflib.unified_diff(original.splitlines(), updated.splitlines(), lineterm=""))[3:]
-    if strip_context:
-        # find first and last lines with changes
-        markers = [line[0] for line in diff]
-        start = min(
-            markers.index("+") if "+" in markers else len(markers),
-            markers.index("-") if "-" in markers else len(markers),
-        )
-        end = min(
-            markers[::-1].index("+") if "+" in markers else len(markers),
-            markers[::-1].index("-") if "-" in markers else len(markers),
-        )
-        diff = diff[start : len(diff) - end]
     return "\n".join(diff)
 
 class LintError(NamedTuple):
@@ -92,7 +80,7 @@ def parse_pylint_error(error_line: str) -> LintError | None:
     return None
 
 def run_pylint_errors(file_path: str | Path) -> List[LintError]:
-    """Run pylint on a file and return only errors within specified region."""
+    """Run pylint on a file."""
     try:
         result = subprocess.run(
             ['pylint', 
@@ -133,8 +121,8 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     after_lint = run_pylint_errors(file_path)
     
     # Filter errors to only those in the patched region
-    before_errors = {err for err in before_lint if start <= err.line <= end}
-    after_errors = {err for err in after_lint if start <= err.line <= end}
+    before_errors = {err for err in before_lint}
+    after_errors = {err for err in after_lint}
     
     # Find new errors that weren't present before
     new_errors = after_errors - before_errors
@@ -150,14 +138,12 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
 _requested = False
 
 def request_to_patch(file_path: str, region: tuple[int, int], patch_description: str) -> str:
-    size = region[1] - region[0]
     global _requested
     _requested = True
     ctx = FileContext(file_path)
     if region[1] == -1: region = (region[0], len(ctx.lines))
     ctx.show(line_range=region, scope="line", parents="none")
     patch_region = ctx.stringify()
-    add_note = size == 0 and ctx.lines[-1] is not None
     return f"""
 Approved '{patch_description}' within region:
 {patch_region}
