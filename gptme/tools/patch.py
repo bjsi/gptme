@@ -162,9 +162,13 @@ def commit_patch(file_path: str) -> Generator[Message, None, None]:
     _requested = None
     yield Message("system", output)
 
-def revert_to(hash: str) -> Generator[Message, None, None]:
-    output = subprocess.run(["git", "reset", "--hard", hash, "-v"], check=True, capture_output=True, text=True).stdout
-    yield Message("system", output)
+def revert_to(hash: str) -> Generator[Message, None , None]:
+    current_hash = subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+    subprocess.run(["git", "reset", "--hard", hash], check=True, capture_output=True, text=True).stdout
+    diff = subprocess.run(["git", "diff", current_hash], check=True, capture_output=True, text=True).stdout
+    output = subprocess.run(["git", "log", "-n", "1", "--oneline"], check=True, capture_output=True, text=True).stdout
+    yield Message("system", f"Reverted to {output}.")
+    yield Message("system", diff)
 
 def request_to_patch(file_path: str, region: tuple[int, int], patch_description: str) -> str:
     global _requested
