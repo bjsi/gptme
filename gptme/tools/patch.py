@@ -164,7 +164,7 @@ def commit_patch(file_path: str) -> Generator[Message, None, None]:
 
 def revert_to(hash: str) -> Generator[Message, None , None]:
     current_hash = subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
-    subprocess.run(["git", "reset", "--hard", hash], check=True, capture_output=True, text=True).stdout
+    subprocess.run(["git", "checkout", hash], check=True, capture_output=True, text=True).stdout
     diff = subprocess.run(["git", "diff", current_hash], check=True, capture_output=True, text=True).stdout
     output = subprocess.run(["git", "log", "-n", "1", "--oneline"], check=True, capture_output=True, text=True).stdout
     yield Message("system", f"Reverted to {output}.")
@@ -243,5 +243,4 @@ __doc__ = tool.get_doc(__doc__)
 
 
 if __name__ == "__main__":
-    print(request_to_patch("hello.py", region=(11, 14), patch_description="Add a prompt for the user's name"))
-    print(run_pylint_errors("hello.py"))
+    pass
