@@ -244,4 +244,4 @@ __doc__ = tool.get_doc(__doc__)
 
 if __name__ == "__main__":
     print("shdasoidsand")
-    print(revert_to('0623c3e8be4cb').content)
+    print(revert_to('3c6b670d64a5b').content)
