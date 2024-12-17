@@ -39,7 +39,7 @@ class FileContext:
         return f"{self.function_query(name)}\n{self.class_query(name)}\n{self.assignment_query(name)}"
 
     def import_query(self):
-        return f"(import_statement name: (identifier) @name.definition.import)"
+        return "(import_statement (dotted_name) @name.definition.import)\n(import_from_statement (dotted_name) @name.definition.import)"
 
     def is_definition(self, node: Node):
         return node.type in ["function_definition", "class_definition", "assignment"]

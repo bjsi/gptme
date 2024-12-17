@@ -6,20 +6,21 @@ instructions = "Use this tool to search the contents of files in the codebase. T
 
 def examples(tool_format):
     return f"""
-> User: search for occurrences of 'def run' in the current directory
+> User: search for occurrences of the `run` function in the current directory
 > Assistant:
 {ToolUse("ipython", [], "search('def run')").to_output(tool_format)}
-> User: search for occurrences of 'run' or 'save' in the test directory
+> User: search for occurrences of the `run` or `save` functions in the test directory
 > Assistant:
 {ToolUse("ipython", [], "search('run|save', 'test')").to_output(tool_format)}
-> User: search for the definition of the Mail class
+> User: search for the definition of the `Mail` class
 > Assistant:
 {ToolUse("ipython", [], "search('class Mail')").to_output(tool_format)}
 """.strip()
 
 def search(query: str, directory: str = "."):
     res = subprocess.run(["rga", "--line-number", "--context", "2", "--heading", "-e", query, directory], capture_output=True, text=True)
-    results = res.stdout
+    results = res.stdout.strip()
+    if not results: return "No results found."
     return f"{results}\nYou can get more context by using the `read` tool with a line_range parameter."
 
 tool = ToolSpec(

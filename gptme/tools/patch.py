@@ -4,6 +4,7 @@ Gives the LLM agent the ability to patch text files, by using a adapted version 
 
 from collections.abc import Generator
 import difflib
+import os
 from pathlib import Path
 import subprocess
 from typing import List, NamedTuple
@@ -15,7 +16,7 @@ from gptme.util.ask_execute import execute_with_confirmation
 from gptme.message import Message
 
 instructions = """
-This can be used to edit files, without having to rewrite the whole file.
+Use `patch` to edit files. It can also be used to create new files.
 Keep the patch as small as possible.
 If the patch region overlaps with existing code, it will overwrite the existing code. Include those lines in your patch if you want to keep them.
 Before submitting a patch, request permission to patch using the `request_to_patch` ipython tool in the previous message.
@@ -51,6 +52,10 @@ Are you sure about your intended change? If not, consider an alternative approac
 > Assistant: Yes, I should update line 13 to include a prompt for the user's name.
 {ToolUse("patch", ['src/hello.py', '(13, 13)'], patch_content2).to_output(tool_format)}
 > System: Patch applied.
+> User: create a new file `ideas.txt` with a TODO list.
+> Assistant: Certainly! I'll create the file:
+{ToolUse("patch", ['ideas.txt', '(1, 1)'], "TODO: Write a TODO list.").to_output(tool_format)}
+> System: Created new file.
 """.strip()
 
 
@@ -81,6 +86,9 @@ def parse_pylint_error(error_line: str) -> LintError | None:
 
 def run_pylint_errors(file_path: str | Path) -> List[LintError]:
     """Run pylint on a file."""
+    file_ext = os.path.splitext(file_path)[1]
+    if file_ext not in [".py", ".pyi"]:
+        return []
     try:
         result = subprocess.run(
             ['pylint', 
@@ -98,6 +106,9 @@ def run_pylint_errors(file_path: str | Path) -> List[LintError]:
         return errors
     except FileNotFoundError:
         return []
+
+# force it to read the section before patching
+_requested = False
 
 def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
     # Convert to Path object if string
@@ -132,14 +143,14 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
         for error in sorted(new_errors):
             yield Message("system", f"  Line {error.line}: {error.message}")
     
+    _requested = False
     yield Message("system", f"Patch applied.")
-
-# fake - just to force it to read the section before patching
-_requested = False
 
 def request_to_patch(file_path: str, region: tuple[int, int], patch_description: str) -> str:
     global _requested
     _requested = True
+    if not os.path.exists(file_path):
+        return "Approved creation of new file."
     ctx = FileContext(file_path)
     if region[1] == -1: region = (region[0], len(ctx.lines))
     ctx.show(line_range=region, scope="line", parents="none")
@@ -147,9 +158,8 @@ def request_to_patch(file_path: str, region: tuple[int, int], patch_description:
     return f"""
 Approved '{patch_description}' within region:
 {patch_region}
-Is this the correct region? If not, use `search` or `read` to find the correct region.
+Is this the correct region to overwrite? If not, use `search` or `read` to find the correct region.
 """.strip()
-
 
 def execute_patch(
     updated_code: str | None,
@@ -161,6 +171,10 @@ def execute_patch(
     global _requested
     if not _requested:
         yield Message("system", "You must first request a patch using the `request_to_patch` ipython tool.")
+        return
+    if not os.path.exists(args[0]):
+        with open(args[0], "w") as f: f.write(updated_code)
+        yield Message("system", "Created new file.")
         return
     region = eval(args[1])
     original_code = "\n".join(open(args[0]).read().splitlines()[region[0] - 1:region[1]])

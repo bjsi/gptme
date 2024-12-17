@@ -40,3 +40,7 @@ tool = ToolSpec(
     examples=examples,
     functions=[read]
 )
+
+if __name__ == "__main__":
+    print(read('hello.py'))
+    print(read('gptme/cli.py', line_range=[140, 160]))
