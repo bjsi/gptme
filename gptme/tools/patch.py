@@ -243,4 +243,5 @@ __doc__ = tool.get_doc(__doc__)
 
 
 if __name__ == "__main__":
-    pass
+    print("shdasoidsand")
+    print(revert_to('4d03b8c45ca'))
