@@ -39,6 +39,7 @@ def examples(tool_format):
 > User: patch the hello function in `src/hello.py` to ask for the name of the user.
 > Assistant: Certainly! I'll patch the file:
 {ToolUse("patch", ['src/hello.py', "(11, 13)"], patch_content1).to_output(tool_format)}
+
 > System: You must first request a patch using the `request_to_patch` ipython tool.
 > Assistant: Certainly! I'll request a patch first:
 {ToolUse("ipython", [], "request_to_patch('src/hello.py', region=(11, 13), patch_description='Add a prompt for the user\'s name')").to_output(tool_format)}
@@ -49,9 +50,19 @@ def examples(tool_format):
  13│        print("Hello World")
 ...⋮...
 Are you sure about your intended change? If not, consider an alternative approach.
+
 > Assistant: Yes, I should update line 13 to include a prompt for the user's name.
 {ToolUse("patch", ['src/hello.py', '(13, 13)'], patch_content2).to_output(tool_format)}
-> System: Patch applied.
+> System:
+add 'src/hello.py'
+[issue_10 c1c1e01] Add a prompt for the user's name
+1 file changed, 1 insertion(+), 1 deletion(-)
+
+> User: Actually, I don't want to patch that file.
+> Assistant: Okay, I'll revert to the previous commit.
+{ToolUse("revert_to", ["c1c1e01~1"]).to_output(tool_format)}
+> System: Patch reverted.
+
 > User: create a new file `ideas.txt` with a TODO list.
 > Assistant: Certainly! I'll create the file:
 {ToolUse("patch", ['ideas.txt', '(1, 1)'], "TODO: Write a TODO list.").to_output(tool_format)}
@@ -60,10 +71,6 @@ Are you sure about your intended change? If not, consider an alternative approac
 
 
 def diff_minimal(original: str, updated: str) -> str:
-    """
-    Show a minimal diff of the patch.
-    Note that a minimal diff isn't necessarily a unique diff.
-    """
     diff = list(difflib.unified_diff(original.splitlines(), updated.splitlines(), lineterm=""))[3:]
     return "\n".join(diff)
 
@@ -107,8 +114,7 @@ def run_pylint_errors(file_path: str | Path) -> List[LintError]:
     except FileNotFoundError:
         return []
 
-# force it to read the section before patching
-_requested = False
+_requested = None
 
 def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
     # Convert to Path object if string
@@ -138,17 +144,31 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     # Find new errors that weren't present before
     new_errors = after_errors - before_errors
     
+    _requested = None
+    yield from commit_patch(file_path)
+
     if new_errors:
         yield Message("system", "⚠️ Warning: New errors introduced in patched region:")
         for error in sorted(new_errors):
             yield Message("system", f"  Line {error.line}: {error.message}")
-    
-    _requested = False
-    yield Message("system", f"Patch applied.")
+        yield Message("system", "Based on the errors, you can either correct or revert the patch.")
+
+def commit_patch(file_path: str) -> Generator[Message, None, None]:
+    global _requested
+    if not _requested: return
+    output = ""
+    output += subprocess.run(["git", "add", "-v", str(file_path)], check=True, capture_output=True, text=True).stdout
+    output += subprocess.run(["git", "commit", "-m", _requested, '-v'], check=True, capture_output=True, text=True).stdout
+    _requested = None
+    yield Message("system", output)
+
+def revert_to(hash: str) -> Generator[Message, None, None]:
+    output = subprocess.run(["git", "reset", "--hard", hash, "-v"], check=True, capture_output=True, text=True).stdout
+    yield Message("system", output)
 
 def request_to_patch(file_path: str, region: tuple[int, int], patch_description: str) -> str:
     global _requested
-    _requested = True
+    _requested = patch_description
     if not os.path.exists(file_path):
         return "Approved creation of new file."
     ctx = FileContext(file_path)
@@ -174,7 +194,7 @@ def execute_patch(
         return
     if not os.path.exists(args[0]):
         with open(args[0], "w") as f: f.write(updated_code)
-        yield Message("system", "Created new file.")
+        yield from commit_patch(args[0])
         return
     region = eval(args[1])
     original_code = "\n".join(open(args[0]).read().splitlines()[region[0] - 1:region[1]])
@@ -196,7 +216,7 @@ tool = ToolSpec(
     desc="Apply a patch to a file",
     instructions=instructions,
     examples=examples,
-    functions=[request_to_patch],
+    functions=[request_to_patch, revert_to],
     execute=execute_patch,
     block_types=["patch"],
     parse_args=lambda s: [s.split()[1], " ".join(s.split()[2:])],

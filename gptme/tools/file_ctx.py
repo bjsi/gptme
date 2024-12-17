@@ -78,7 +78,7 @@ class FileContext:
         lines: Optional[list[int]] = None,
         query: Optional[str] = None,
         names: Optional[list[str]] = None,
-        scope: Literal["full", "line"] = "line",
+        scope: Literal["full", "line", "partial"] = "line",
         parents: Literal["none", "all"] = "none",
         last_line: bool = True,
     ):
@@ -87,7 +87,7 @@ class FileContext:
             # the agent may expand the context around a line like a docstring which
             # doesn't give it proper context so just default to showing the entire function
             nodes = [self.node_for_line(line, definition = True) for line in lines]
-            scope = "full"
+            self.show_indices.update([l - 1 for l in lines])
         elif query: nodes = self.query(query)
         elif names: nodes = self.query(self.definition_query("|".join(names)))
         elif line_range:
@@ -98,6 +98,7 @@ class FileContext:
         for node in nodes:
             if scope == "full": self.show_indices.update(range(node.start_point[0], node.end_point[0] + 1))
             elif scope == "line": self.show_indices.add(node.start_point[0])
+            elif scope == "partial": self.show_indices.update((node.start_point[0], node.end_point[0]))
             if parents == "all":
                 while node.parent:
                     self.show_indices.add(node.parent.start_point[0])
@@ -160,7 +161,7 @@ class FileContext:
             if line_number: line_output = f"{i+1:3}" + line_output
             output += line_output + "\n"
             dots = True
-        return output
+        return output.rstrip()
 
 if __name__ == "__main__":
     context = FileContext("hello.py")
