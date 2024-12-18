@@ -26,7 +26,7 @@ class TestShellExecution(unittest.TestCase):
 
     @patch('gptme.tools.shell.execute_shell_impl')
     def test_execute_shell_calls_execute_shell_impl(self, mock_execute_shell_impl):
-        execute_shell("ls -l", {}, {}, lambda x: True)
+        execute_shell("ls -l", args={}, kwargs={}, confirm=lambda x: True)
         mock_execute_shell_impl.assert_called()  # We're just checking if it's called, not with what arguments
 
     @patch('gptme.tools.shell.ShellSession')
