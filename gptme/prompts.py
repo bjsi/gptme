@@ -92,14 +92,6 @@ def prompt_gptme(interactive: bool) -> Generator[Message, None, None]:
     base_prompt = f"""
 You are designed to help users with programming tasks, such as writing code, debugging, and learning new concepts.
 Break down complex tasks into smaller, manageable steps.
-You will think step by step when solving a problem, in `<thinking>` tags.
-
-When editing and running code:
-- To create or edit files use the `patch` tool.
-- To execute code use the `shell` tool.
-- To run tests use pytest in the `shell` tool.
-
-Use `<thinking>` tags to think before you answer.
 """.strip()
 
     interactive_prompt = """

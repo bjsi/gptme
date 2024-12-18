@@ -117,7 +117,7 @@ _requested = None
 
 # reject_error_types = ['syntax-error', 'invalid-syntax', 'missing-parentheses', 'missing-final-newline', 'mixed-indentation', 'trailing-whitespace', 'unexpected-indentation', 'bad-indentation', 'bad-whitespace', 'mixed-line-endings']
 
-def patch(file_path: str | Path, region: tuple[int, int], patch: str, diff: str) -> Generator[Message, None, None]:
+def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
     # Convert to Path object if string
     file_path = Path(file_path)
     start, end = region
@@ -147,13 +147,16 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str, diff: str)
     
     _requested = None
     yield from commit_patch(file_path)
-    yield Message("system", diff)
+    ctx = FileContext(file_path)
+    ctx.show(line_range=region, scope="line", parents="none")
+    diff = ctx.stringify()
+    yield Message("system", f"Updated region:\n{diff}")
     if new_errors:
         yield Message("system", "⚠️ Warning: New errors introduced in patched region:")
         for error in sorted(new_errors):
             yield Message("system", f"  Line {error.line}: {error.message}")
     if os.environ.get("POST_PATCH_MSG"): yield Message("system", os.environ.get("POST_PATCH_MSG"))
-    yield Message("system", "If you notice errors, you can either correct or revert the patch.")
+    yield Message("system", "If you notice errors, you can correct them or revert the patch using the `revert_to` tool.")
 
 def commit_patch(file_path: str) -> Generator[Message, None, None]:
     global _requested
@@ -228,7 +231,7 @@ def execute_patch(
         args,
         kwargs,
         confirm,
-        execute_fn=lambda *_: patch(args[0], region, updated_code, diff_preview),
+        execute_fn=lambda *_: patch(args[0], region, updated_code),
         get_path_fn=get_path,
         preview_fn=lambda *_: diff_preview,
         preview_lang="diff",
