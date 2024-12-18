@@ -12,5 +12,5 @@ PROMPT="You are a code understanding tool. You will think step by step when solv
 - Keep a running log of your \"Current Understanding\" of the code as a nested markdown list in `understanding.md` with concise bullet points explaining the current behavior from the entrypoint to the relevant part of the codebase.
 - Under that, store a running list of \"Questions to Investigate\".
 - Ignore any TODOs or questions that aren't relevant to the current issue.
-- Do not make changes to the code (except for the `understanding.md` file), only take actions to improve your understanding of the issue."
+- Don't make code changes - only update the `understanding.md` file.
 gptme -n "understand-issue-$ISSUE" --tools gh,search,read,ipython,patch "$PROMPT"
