@@ -152,6 +152,7 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str, diff: str)
         yield Message("system", "⚠️ Warning: New errors introduced in patched region:")
         for error in sorted(new_errors):
             yield Message("system", f"  Line {error.line}: {error.message}")
+    if os.environ.get("POST_PATCH_MSG"): yield Message("system", os.environ.get("POST_PATCH_MSG"))
     yield Message("system", "If you notice errors, you can either correct or revert the patch.")
 
 def commit_patch(file_path: str) -> Generator[Message, None, None]:
