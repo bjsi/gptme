@@ -26,5 +26,5 @@ def test_execute_shell():
     
     assert len(result) == 1
     assert result[0].role == "system"
-    assert "Ran command" in result[0].content
+    assert "Ran allowlisted command" in result[0].content
     assert "Hello, World!" in result[0].content
