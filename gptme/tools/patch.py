@@ -209,7 +209,7 @@ def execute_patch(
         args,
         kwargs,
         confirm,
-        execute_fn=lambda *_: patch(args[0], region, updated_code),
+        execute_fn=lambda *_: patch(args[0], region, updated_code, diff_preview),
         get_path_fn=get_path,
         preview_fn=lambda *_: diff_preview,
         preview_lang="diff",

@@ -12,9 +12,9 @@ instructions = "Interact with GitHub via the GitHub CLI (gh). Use the `shell` to
 
 def examples(tool_format):
     return f"""
-> User: read issue 123
-> Assistant: Certainly! I'll fetch the issue, making sure to include comments.
-{ToolUse("shell", [], "gh issue view 123 --comments").to_output(tool_format)}
+> User: read the issue
+> Assistant:
+{ToolUse("shell", [], "gh issue view $ISSUE --comments").to_output(tool_format)}
 """
 
 

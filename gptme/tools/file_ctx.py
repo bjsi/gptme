@@ -71,6 +71,13 @@ class FileContext:
         query = PY_LANGUAGE.query(query_string)
         captures = query.captures(self.tree.root_node)
         return [node for _, nodes in captures.items() for node in nodes]
+
+    def preprocess_names(self, names: list[str]):
+        output = []
+        for name in names:
+            output += name.split(".") # support class.method queries
+            output.append(name) # include just in case
+        return output
     
     def show(
         self,
@@ -89,7 +96,7 @@ class FileContext:
             nodes = [self.node_for_line(line, definition = True) for line in lines]
             self.show_indices.update([l - 1 for l in lines])
         elif query: nodes = self.query(query)
-        elif names: nodes = self.query(self.definition_query("|".join(names)))
+        elif names: nodes = self.query(self.definition_query("|".join(self.preprocess_names(names))))
         elif line_range:
             nodes = [self.node_for_line(line) for line in range(line_range[0], line_range[1] + 1)]
             self.show_indices.update(range(line_range[0], line_range[1] + 1))
