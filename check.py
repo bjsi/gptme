@@ -22,7 +22,7 @@ def test_execute_shell():
         return True
 
     cmd = "echo 'Hello, World!'"
-    result = list(execute_shell(cmd, None, None, mock_confirm))
+    result = list(execute_shell(None, None, {"command": cmd}, mock_confirm))
     
     assert len(result) == 1
     assert result[0].role == "system"
