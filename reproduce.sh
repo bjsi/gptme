@@ -85,11 +85,10 @@ ASSISTANT_MSG4="Thank you. Now, let's apply the patch to create the \`check.py\`
 $INIT_CHECK_PY
 \`\`\`"
 
-INIT_MESSAGES="
-[
+INIT_MESSAGES="[
     {
         \"role\": \"user\",
-        \"content\": \"\"
+        \"content\": \"$USER\"
     },
     {
         \"role\": \"assistant\",

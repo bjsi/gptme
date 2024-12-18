@@ -172,6 +172,7 @@ def main(
                       "shell",
                       "ipython",]
     show_hidden = True
+    print(f"init_messages: {init_messages}")
     """Main entrypoint for the CLI."""
     if version:
         # print version
