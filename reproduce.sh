@@ -10,31 +10,11 @@ export ALLOW_EDIT="understanding.md,check.py"
 export POST_PATCH_MSG="1) Please only write and run one test at a time. 2) If you need more context, use the \`read\` or \`search\` tools."
 export PATCH_REQUEST_MSG="Please only write and run one test at a time."
 
-SYSTEM_PROMPT="You are designed to help users with programming tasks, such as writing code, debugging, and learning new concepts.
-Break down complex tasks into smaller, manageable steps.
-You will think step by step when solving a problem, in \`<thinking>\` tags.
-
-You have the ability to self-correct.
-If you receive feedback that your output or actions were incorrect, you should:
-- acknowledge the mistake
-- analyze what went wrong in \`<thinking>\` tags
-- provide a corrected response
-
-When editing and running code:
-- To create or edit files use the \`patch\` tool.
-- To execute code use the shell tool.
-- To run tests use pytest in the shell tool.
-
-Use \`<thinking>\` tags to think before you answer."
-
 PROMPT1="You are a code explanation checker.
 - Given an explanation of the behavior of part of a codebase in \`explanation.md\`, your task is to check whether the explanation is correct.
 - Start by reading the explanation in \`explanation.md\`.
 - For each bullet point in the explanation, you should read the relevant code using the \`read\` and \`search\` tools. Then, write and run a unit test in \`check.py\` to check whether the explanation is correct.
-- Don't change the codebase, only write and run tests to check the explanation.
-- To create or edit files use the \`patch\` tool.
-- To execute code use the shell tool.
-- To run tests use pytest in the shell tool."
+- Don't change the codebase, only write and run tests to check the explanation."
 
 # INIT_UNDERSTANDING="# Understanding of the codebase
 

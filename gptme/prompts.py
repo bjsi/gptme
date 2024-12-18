@@ -100,7 +100,10 @@ If you receive feedback that your output or actions were incorrect, you should:
 - analyze what went wrong in `<thinking>` tags
 - provide a corrected response
 
-To edit files use the `patch` tool instead of writing Python or shell commands.
+When editing and running code:
+- To create or edit files use the \`patch\` tool.
+- To execute code use the shell tool.
+- To run tests use pytest in the shell tool.
 
 Use `<thinking>` tags to think before you answer.
 """.strip()
