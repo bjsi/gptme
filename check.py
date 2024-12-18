@@ -2,7 +2,7 @@ import unittest
 import sys
 import io
 from contextlib import redirect_stdout
-
+from gptme.message import Message
 class TestCodeBehavior(unittest.TestCase):
     def setUp(self):
         # Set up any necessary objects or configurations
