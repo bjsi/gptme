@@ -1,12 +1,8 @@
-import unittest
-import sys
-import io
-from contextlib import redirect_stdout
 from gptme.message import Message
+from gptme.tools.shell import execute_shell
+
 class TestShellExecution:
     def test_execute_shell(self):
-        from gptme.tools.shell import execute_shell
-
         # Mock the confirm function
         def mock_confirm(msg):
             return True
