@@ -3,6 +3,7 @@ import io
 from contextlib import redirect_stdout
 import pytest
 from unittest.mock import patch, MagicMock
+from gptme.message import Message
 
 @pytest.fixture
 def setup():
