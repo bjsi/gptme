@@ -2,6 +2,10 @@ import unittest
 from unittest.mock import patch, MagicMock
 from gptme.tools.shell import execute_shell
 
+print("Executing test file")
+
+class TestShellExecution(unittest.TestCase):
+
 class TestShellExecution(unittest.TestCase):
     @patch('gptme.tools.shell.get_shell_command')
     @patch('gptme.tools.shell.execute_shell_impl')
