@@ -21,7 +21,15 @@
   - It yields a single Message object with the formatted output.
   - It handles exceptions and return codes.
 
+- Long-running commands are handled as follows:
+  - The `ShellSession._run` method executes commands and captures their output.
+  - It uses a while loop with `select.select` to read output as it becomes available.
+  - The method will block until the command completes or the process dies.
+  - There's no specific timeout mechanism or way to interrupt long-running commands.
+  - Output is captured and optionally printed in real-time.
+  - The execution continues until a specific delimiter is encountered, which is added after the command.
+
 # Questions to investigate
 
-- How are long-running commands handled?
 - Is there a way to interrupt commands?
+- How can we implement monitoring for long-running commands as suggested in the issue?
