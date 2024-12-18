@@ -69,8 +69,7 @@ add 'src/hello.py'
 > System: Created new file.
 """.strip()
 
-
-def diff_minimal(original: str, updated: str) -> str:
+def diff(original: str, updated: str) -> str:
     diff = list(difflib.unified_diff(original.splitlines(), updated.splitlines(), lineterm=""))[3:]
     return "\n".join(diff)
 
@@ -116,7 +115,9 @@ def run_pylint_errors(file_path: str | Path) -> List[LintError]:
 
 _requested = None
 
-def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
+# reject_error_types = ['syntax-error', 'invalid-syntax', 'missing-parentheses', 'missing-final-newline', 'mixed-indentation', 'trailing-whitespace', 'unexpected-indentation', 'bad-indentation', 'bad-whitespace', 'mixed-line-endings']
+
+def patch(file_path: str | Path, region: tuple[int, int], patch: str, diff: str) -> Generator[Message, None, None]:
     # Convert to Path object if string
     file_path = Path(file_path)
     start, end = region
@@ -146,12 +147,12 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     
     _requested = None
     yield from commit_patch(file_path)
-
+    yield Message("system", diff)
     if new_errors:
         yield Message("system", "⚠️ Warning: New errors introduced in patched region:")
         for error in sorted(new_errors):
             yield Message("system", f"  Line {error.line}: {error.message}")
-        yield Message("system", "Based on the errors, you can either correct or revert the patch.")
+    yield Message("system", "If you notice errors, you can either correct or revert the patch.")
 
 def commit_patch(file_path: str) -> Generator[Message, None, None]:
     global _requested
@@ -202,6 +203,7 @@ def execute_patch(
         return
     region = eval(args[1])
     original_code = "\n".join(open(args[0]).read().splitlines()[region[0] - 1:region[1]])
+    diff_preview = diff(original_code, updated_code)
     yield from execute_with_confirmation(
         updated_code,
         args,
@@ -209,7 +211,7 @@ def execute_patch(
         confirm,
         execute_fn=lambda *_: patch(args[0], region, updated_code),
         get_path_fn=get_path,
-        preview_fn=lambda *_: diff_minimal(original_code, updated_code),
+        preview_fn=lambda *_: diff_preview,
         preview_lang="diff",
         confirm_msg=f"Patch to {get_path(updated_code, args, kwargs)}?",
         allow_edit=True,

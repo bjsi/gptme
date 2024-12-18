@@ -27,7 +27,6 @@ from .tmux import tool as tmux_tool
 from .vision import tool as vision_tool
 from .youtube import tool as youtube_tool
 from .read import tool as read_tool
-from .plan import tool as plan_tool
 from .search import tool as search_tool
 
 logger = logging.getLogger(__name__)

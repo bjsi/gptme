@@ -51,25 +51,45 @@ def parse_search_results(results: str) -> Dict[Path, List[int]]:
         file_contexts[path] = ctx.stringify()
     return file_contexts
 
-def search(query: str, directory: str = "."):
+def search_file_names(query: str, directory: str = "."):
+    p1 = subprocess.Popen(
+        ["rga", "--files", directory],
+        stdout=subprocess.PIPE,
+        text=True
+    )
+    p2 = subprocess.Popen(
+        ["rga", "-e", query],
+        stdin=p1.stdout,
+        stdout=subprocess.PIPE,
+        text=True
+    )
+    p1.stdout.close()
+    output = p2.communicate()[0]
+    return output.strip()
+
+def search(query: str, file_or_dir: str = "."):
     """Search the contents of files in the codebase.
     Searches with rga then parses results with tree-sitter to add more context if possible.
     """
-    res = subprocess.run(
-        ["rga", "--line-number", "--no-heading", "-e", query, directory],
+    file_contents = subprocess.run(
+        ["rga", "--line-number", "--no-heading", "-e", query, file_or_dir],
         capture_output=True,
         text=True
     )
-    if os.path.isfile(directory):
+    file_names = search_file_names(query, file_or_dir)
+    file_name_results = f"File name matches:\n{file_names}\n" + '-' * 80 + "\n"
+    if os.path.isfile(file_or_dir):
         # If directory is a single file, prepend filename to each line
-        res.stdout = "\n".join(f"{directory}:{line}" for line in res.stdout.splitlines())
-    parsed = parse_search_results(res.stdout)
+        file_contents.stdout = "\n".join(f"{file_or_dir}:{line}" for line in file_contents.stdout.splitlines())
+    parsed = parse_search_results(file_contents.stdout)
     output = ""
+    num_results = len(parsed.keys())
+    if num_results > 40: return f"Found >{num_results} results. Please use a more specific search query."
     for path, ctx in parsed.items():
         output += f"{path}\n{ctx}\n" + '-' * 80 + "\n"
     results = output.strip()
     if not results: return "No results found."
-    return f"{results}\nYou can get more context by using the `read` tool with line ranges or names of functions, classes or variables."
+    return f"{file_name_results}{results}\nYou can get more context by using the `read` tool with line ranges or names of functions, classes or variables."
 
 tool = ToolSpec(
     name="search",
@@ -78,6 +98,3 @@ tool = ToolSpec(
     examples=examples,
     functions=[search],
 )
-
-if __name__ == "__main__":
-    print(search("running", ))
