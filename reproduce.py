@@ -14,7 +14,7 @@ def main():
     
     # Environment variables
     os.environ["ISSUE"] = issue
-    os.environ["ALLOW_EDIT"] = "understanding.md,check.py"
+    os.environ["ALLOW_EDIT"] = "check.py"
     os.environ["POST_PATCH_MSG"] = "1) Please only write and run one test at a time. 2) If you need more context, use the `read` or `search` tools."
     os.environ["PATCH_REQUEST_MSG"] = "Please only write and run one test at a time."
 
@@ -54,7 +54,7 @@ When editing and running code:
 Use `<thinking>` tags to think before you answer."""
 
     # Assistant messages
-    assistant_msg1 = """Certainly! Let's start by creating the `understanding.md` and `check.py` files.
+    assistant_msg1 = """Certainly! Let's start by creating the `check.py` file.
 
 <thinking>
 1. First let's do a patch to create the `check.py` file and add the necessary testing boilerplate.
@@ -83,10 +83,7 @@ request_to_patch('check.py', region=(1, 1), patch_description='Initialise the ch
         {"role": "system", "content": "Approved."},
     ]
 
-    print(json.dumps(init_messages))
-
     # Run gptme command
-    # cmd = f'gptme -n "check-explanation-issue-{issue}" --tools gh,search,read,ipython,patch --init-messages \'{json.dumps(init_messages)}\' "Great, let\'s continue."'
     subprocess.run(["gptme", "-n", f"check-explanation-issue-{issue}", "--tools", "gh,search,read,ipython,patch", "--init-messages", json.dumps(init_messages)])
 
 if __name__ == "__main__":
