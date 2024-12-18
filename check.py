@@ -13,4 +13,10 @@ def teardown():
     # Clean up after each test
     yield
     # Cleanup code here
+
+def test_execute_shell():
+    from gptme.tools.shell import execute_shell, get_shell_command
+    from gptme.message import Message
+
+    # Test implementation will go here
     pass
