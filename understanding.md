@@ -13,8 +13,15 @@
   - There's a mechanism to restart the shell if it dies unexpectedly.
   - It sets some environment variables to control pager behavior (PAGER, GH_PAGER, GIT_PAGER).
 
+- The `execute_shell_impl` function is the core implementation of shell command execution:
+  - It uses the `ShellSession` class to run the command.
+  - It checks if the command is allowlisted.
+  - It captures stdout and stderr, and shortens them if necessary.
+  - It formats the output into a structured message.
+  - It yields a single Message object with the formatted output.
+  - It handles exceptions and return codes.
+
 # Questions to investigate
 
-- What is the purpose of the `execute_shell_impl` function?
 - How are long-running commands handled?
 - Is there a way to interrupt commands?
