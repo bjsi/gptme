@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import subprocess
 import sys
@@ -22,24 +24,22 @@ def main():
 # Questions to investigate
 """
 
-    init_check_py = """import unittest
-import sys
+    init_check_py = """import sys
 import io
 from contextlib import redirect_stdout
+import pytest
 
-class TestCodeBehavior(unittest.TestCase):
-    def setUp(self):
-        # Set up any necessary objects or configurations
-        pass
+@pytest.fixture
+def setup():
+    # Set up any necessary objects or configurations
+    pass
 
-    def tearDown(self):
-        # Clean up after each test
-        pass
-
-    # Test methods will be added here
-
-if __name__ == '__main__':
-    unittest.main()
+@pytest.fixture
+def teardown():
+    # Clean up after each test
+    yield
+    # Cleanup code here
+    pass
 """
 
     # Write initial files
