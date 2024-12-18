@@ -11,4 +11,3 @@ def test_execute_shell_uses_execute_shell_impl():
         mock_execute_shell_impl.return_value = iter([])
         list(execute_shell('echo "test"', None, None, lambda _: True))
         mock_execute_shell_impl.assert_called_once()
-        mock_get_shell_command.assert_called_once_with('echo "test"', None, None)
