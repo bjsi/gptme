@@ -161,7 +161,7 @@ def main(
 ):
     tool_allowlist = ['read',
                       'search',
-                      # "patch",
+                      "patch",
                       "shell",
                       "ipython",]
     show_hidden = True
