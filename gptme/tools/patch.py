@@ -189,7 +189,10 @@ def request_to_patch(file_path: str, region: tuple[int, int], patch_description:
     if not allow_edit(file_path):
         return f"You are not allowed to edit this file.\nYou are allowed to edit:\n{'\n'.join(os.environ.get('ALLOW_EDIT').split(','))}"
     if not os.path.exists(file_path):
-        return "Approved creation of new file."
+        output = ""
+        if os.environ.get("PATCH_REQUEST_MSG"): output += f"{os.environ.get('PATCH_REQUEST_MSG')}\n"
+        output += "Approved creation of new file."
+        return f"{output}"
     ctx = FileContext(file_path)
     if region[1] == -1: region = (region[0], len(ctx.lines))
     ctx.show(line_range=region, scope="line", parents="none")

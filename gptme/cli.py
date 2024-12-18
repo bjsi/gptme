@@ -7,6 +7,7 @@ from datetime import datetime
 from itertools import islice
 from pathlib import Path
 from typing import Literal
+import json
 
 import click
 from pick import pick
@@ -143,6 +144,11 @@ The interface provides user commands that can be used to interact with the syste
     is_flag=True,
     help="Show version and configuration information",
 )
+@click.option(
+    "--init-messages",
+    default=None,
+    help="JSON list of initial messages to add after the system prompt.",
+)
 def main(
     prompts: list[str],
     prompt_system: str,
@@ -158,6 +164,7 @@ def main(
     version: bool,
     resume: bool,
     workspace: str | None,
+    init_messages: str | None,
 ):
     tool_allowlist = ['read',
                       'search',
@@ -207,6 +214,23 @@ def main(
             tool_format=tool_format,
         )
     ]
+
+    # Add init_messages if provided
+    if init_messages:
+        try:
+            messages = json.loads(init_messages)
+            if not isinstance(messages, list):
+                raise ValueError("init-messages must be a JSON list")
+            for msg in messages:
+                if not isinstance(msg, dict) or 'role' not in msg or 'content' not in msg:
+                    raise ValueError("Each message must have 'role' and 'content' fields")
+                initial_msgs.append(Message(msg['role'], msg['content']))
+        except json.JSONDecodeError:
+            logger.error("Failed to parse init-messages JSON")
+            sys.exit(1)
+        except ValueError as e:
+            logger.error(str(e))
+            sys.exit(1)
 
     # if stdin is not a tty, we might be getting piped input, which we should include in the prompt
     was_piped = False
