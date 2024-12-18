@@ -121,11 +121,11 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     # Apply the patch
     original = open(file_path).read()
     original_lines = original.splitlines()
+    updated_lines = original_lines[:]
     if start > len(original_lines):
-        original_lines.extend(patch.splitlines())
+        updated_lines.extend(patch.splitlines())
         yield Message("system", "Appending patch to end of file.")
     else:
-        updated_lines = original_lines[:]
         updated_lines[start-1:end] = patch.splitlines()
     
     # Write the patched content
@@ -222,10 +222,12 @@ def execute_patch(
         return
     code_lines = open(args[0]).read().splitlines()
     region = eval(args[1])
-    if region[0] == -1: region[0] = len(code_lines)
-    if region[1] == -1: region[1] = len(code_lines)
-    original_code = "\n".join(code_lines[region[0] - 1:region[1]])
-    diff_preview = diff(original_code, updated_code)
+    if region[0] == -1:
+        region = (len(code_lines), len(code_lines))
+        diff_preview = diff("", updated_code)
+    else:
+        original_code = "\n".join(code_lines[region[0] - 1:region[1]])
+        diff_preview = diff(original_code, updated_code)
     yield from execute_with_confirmation(
         updated_code,
         args,
