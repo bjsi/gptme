@@ -14,3 +14,17 @@ def teardown():
     yield
     # Cleanup code here
     pass
+
+from gptme.tools.shell import execute_shell, get_shell_command, execute_shell_impl
+
+def test_execute_shell():
+    def mock_confirm(msg):
+        return True
+
+    cmd = "echo 'Hello, World!'"
+    result = list(execute_shell(cmd, None, None, mock_confirm))
+    
+    assert len(result) == 1
+    assert result[0].role == "system"
+    assert "Ran command" in result[0].content
+    assert "Hello, World!" in result[0].content
