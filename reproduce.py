@@ -18,12 +18,6 @@ def main():
     os.environ["POST_PATCH_MSG"] = "1) Please only write and run one test at a time. 2) If you need more context, use the `read` or `search` tools."
     os.environ["PATCH_REQUEST_MSG"] = "Please only write and run one test at a time."
 
-    # Initial content templates
-    init_understanding = """# Current understanding
-
-# Questions to investigate
-"""
-
     init_check_py = """import sys
 import io
 from contextlib import redirect_stdout
@@ -42,10 +36,6 @@ def teardown():
     pass
 """
 
-    # Write initial files
-    with open("understanding.md", "w") as f:
-        f.write(init_understanding)
-    
     with open("check.py", "w") as f:
         f.write(init_check_py)
 
@@ -53,8 +43,8 @@ def teardown():
     user_prompt = """You are a code explanation checker.
 - Given an explanation of the behavior of part of a codebase in `explanation.md`, your task is to check whether the explanation is correct.
 - Start by reading the explanation in `explanation.md`.
-- For each bullet point in the explanation, you should read the relevant code using the `read` and `search` tools. Then, write and run a unit test in `check.py` to check whether the explanation is correct.
-- Don't change the codebase, only write and run tests to check the explanation.
+- For each bullet point in the explanation, read the relevant code using the `read` and `search` tools, then write and run a unit test in `check.py` to check whether the explanation is correct.
+- Correct any inaccuracies or omissions in the `explanation.md` file as you go.
 
 When editing and running code:
 - To create or edit files use the `patch` tool.
@@ -67,35 +57,21 @@ Use `<thinking>` tags to think before you answer."""
     assistant_msg1 = """Certainly! Let's start by creating the `understanding.md` and `check.py` files.
 
 <thinking>
-1. First, let's do a patch to create the `understanding.md` file and add the requested headings.
-2. Then, we'll do a patch to create the `check.py` file and add the necessary testing boilerplate.
-3. We'll use the `read` and `search` tools to examine the relevant functions and tests in detail.
-4. As we go, we'll keep a log of our understanding in `understanding.md`.
-5. We'll also maintain a list of questions to investigate further.
+1. First let's do a patch to create the `check.py` file and add the necessary testing boilerplate.
+2. Then, we'll use the `read` and `search` tools to examine the relevant functions for each bullet point and write and run a unit test in `check.py` to check whether the explanation is correct.
+3. As we go, we'll update the `explanation.md` file to correct any inaccuracies or omissions.
 </thinking>
 
-Let's begin by creating the `understanding.md` file:
-
-```ipython
-request_to_patch('understanding.md', region=(1, 1), patch_description='Initialise the understanding.md file')
-```"""
-
-    assistant_msg2 = f"""Thank you for approving the creation of the new file. Now, let's apply the patch to create the `understanding.md` file with the desired headings:
-
-```patch understanding.md (1, 1)
-{init_understanding}
-```"""
-
-    assistant_msg3 = """Thank you. Now, let's create the `check.py` file:
+Let's begin by creating the `check.py` file:
 
 ```ipython
 request_to_patch('check.py', region=(1, 1), patch_description='Initialise the check.py file')
 ```"""
 
-    assistant_msg4 = f"""Thank you. Now, let's apply the patch to create the `check.py` file:
+    assistant_msg2 = """Thank you. Now, let's create the `check.py` file:
 
-```patch check.py (1, 1)
-{init_check_py}
+```ipython
+request_to_patch('check.py', region=(1, 1), patch_description='Initialise the check.py file')
 ```"""
 
     # Create initial messages list
@@ -105,10 +81,6 @@ request_to_patch('check.py', region=(1, 1), patch_description='Initialise the ch
         {"role": "system", "content": "Approved."},
         {"role": "assistant", "content": assistant_msg2},
         {"role": "system", "content": "Approved."},
-        {"role": "assistant", "content": assistant_msg3},
-        {"role": "system", "content": "Approved."},
-        {"role": "assistant", "content": assistant_msg4},
-        {"role": "system", "content": "Approved."}
     ]
 
     print(json.dumps(init_messages))
