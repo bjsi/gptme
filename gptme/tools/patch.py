@@ -175,7 +175,12 @@ def revert_to(hash: str) -> Message:
 def allow_edit(file_path: str) -> bool:
     allow_edit = os.environ.get("ALLOW_EDIT")
     if not allow_edit: return True
-    if file_path in allow_edit.split(','): return True
+    allowed = allow_edit.split(',')
+    file_path = str(file_path)  # Convert Path to string if needed
+    for allowed_path in allowed:
+        # Check if file matches exactly or is under allowed directory
+        if file_path == allowed_path or file_path.startswith(allowed_path + '/'):
+            return True
     return False
 
 def request_to_patch(file_path: str, region: tuple[int, int], patch_description: str) -> str:
