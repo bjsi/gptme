@@ -16,6 +16,16 @@ def teardown():
     # Cleanup code here
     pass
 
+@patch('gptme.tools.shell.get_shell_command')
+def test_execute_shell_uses_get_shell_command(mock_get_shell_command):
+    mock_get_shell_command.return_value = "echo 'Test'"
+    
+    def mock_confirm(msg):
+        return True
+
+    list(execute_shell("original command", None, None, mock_confirm))
+    
+    mock_get_shell_command.assert_called_once_with("original command", None, None)
 from gptme.tools.shell import execute_shell, get_shell_command, execute_shell_impl
 
 def test_execute_shell():
