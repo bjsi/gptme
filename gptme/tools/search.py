@@ -68,9 +68,6 @@ def search_file_names(query: str, directory: str = "."):
     return output.strip()
 
 def search(query: str, file_or_dir: str = "."):
-    """Search the contents of files in the codebase.
-    Searches with rga then parses results with tree-sitter to add more context if possible.
-    """
     file_contents = subprocess.run(
         ["rga", "--line-number", "--no-heading", "-e", query, file_or_dir],
         capture_output=True,

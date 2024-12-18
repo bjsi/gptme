@@ -83,16 +83,6 @@ file2.txt
 README.md
 main.py
 '''.strip()).to_output()}
-> Assistant: Now lets check the README
-{ToolUse("shell", [], "cat README.md").to_output(tool_format)}
-> System:
-{ToolUse("stdout", [], "(contents of README.md)").to_output()}
-> Assistant: Now we check main.py
-{ToolUse("shell", [], "cat main.py").to_output(tool_format)}
-> System:
-{ToolUse("stdout", [], "(contents of main.py)").to_output()}
-> Assistant: The project is...
-
 
 #### Create vue project
 
