@@ -194,10 +194,12 @@ def request_to_patch(file_path: str, region: tuple[int, int], patch_description:
     if region[1] == -1: region = (region[0], len(ctx.lines))
     ctx.show(line_range=region, scope="line", parents="none")
     patch_region = ctx.stringify()
+    reminders = "Is this the correct region to overwrite? If not, use `search` or `read` to find the correct region."
+    if os.environ.get("PATCH_REQUEST_MSG"): reminders += f"\n{os.environ.get('PATCH_REQUEST_MSG')}"
     return f"""
 Approved '{patch_description}' within region:
 {patch_region}
-Is this the correct region to overwrite? If not, use `search` or `read` to find the correct region.
+{reminders}
 """.strip()
 
 def execute_patch(

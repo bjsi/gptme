@@ -1,0 +1,16 @@
+- Issue 348 requests a way for agents to monitor and optionally interrupt long-running commands.
+- The `execute_shell` function in `gptme/tools/shell.py` is the main entry point for executing shell commands.
+  - It uses `get_shell_command` to construct the command string.
+  - The actual execution is done by `execute_shell_impl`.
+- `execute_shell_impl` function:
+  - Uses a `ShellSession` object to run the command.
+  - Captures stdout and stderr.
+  - Formats the output into a message.
+  - Yields a system message with the command output.
+- The `ShellSession` class manages the shell environment:
+  - It uses `subprocess.Popen` to create a shell process.
+  - The `run` method executes commands in this shell.
+- The `LogManager` class in `gptme/logmanager.py` is responsible for managing the conversation log.
+  - The `append` method is used to add new messages to the log.
+- There's currently no implementation for monitoring long-running commands or interrupting them.
+- The issue suggests adding messages to the conversation log every 10 seconds for long-running commands.

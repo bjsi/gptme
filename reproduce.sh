@@ -7,7 +7,8 @@ fi
 
 export ISSUE=$1
 export ALLOW_EDIT="understanding.md,check.py"
-# export POST_PATCH_MSG="Are you sure your changes are relevant to issue $ISSUE?"
+export POST_PATCH_MSG="1) Please only write and run one test at a time. 2) If you need more context, use the \`read\` or \`search\` tools."
+export PATCH_REQUEST_MSG="Please only write and run one test at a time."
 
 SYSTEM_PROMPT="You are designed to help users with programming tasks, such as writing code, debugging, and learning new concepts.
 Break down complex tasks into smaller, manageable steps.
@@ -24,7 +25,7 @@ To edit files use the \`patch\` tool instead of writing Python or shell commands
 Use \`<thinking>\` tags to think before you answer."
 
 PROMPT1="You are a code explanation checker.
-- Given a detailed explanation of the behavior of part of a codebase, your task is to check whether the explanation is correct.
+- Given a detailed explanation of the behavior of part of a codebase in \`explanation.md\`, your task is to check whether the explanation is correct.
 - You are naturally a very skeptical person, so you will be very critical of the explanation.
 - For each bullet point in the explanation, you should write and run a unit test in \`check.py\` to check whether the explanation is correct.
 - Don't change the codebase, only write and run tests to check the explanation.
