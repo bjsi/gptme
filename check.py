@@ -3,18 +3,7 @@ import sys
 import io
 from contextlib import redirect_stdout
 from gptme.message import Message
-class TestCodeBehavior(unittest.TestCase):
-    def setUp(self):
-        # Set up any necessary objects or configurations
-        pass
-
-    def tearDown(self):
-        # Clean up after each test
-        pass
-
-    # Test methods will be added here
-
-if __name__ == '__main__':
+class TestShellExecution:
     def test_execute_shell(self):
         from gptme.tools.shell import execute_shell
 
@@ -27,10 +16,8 @@ if __name__ == '__main__':
         result = list(execute_shell(command, None, None, mock_confirm))
 
         # Check if the result is a list with one Message
-        self.assertEqual(len(result), 1)
-        self.assertIsInstance(result[0], Message)
-        self.assertEqual(result[0].role, "system")
-        self.assertIn("Ran command", result[0].content)
-        self.assertIn("Hello, World!", result[0].content)
-
-    unittest.main()
+        assert len(result) == 1
+        assert isinstance(result[0], Message)
+        assert result[0].role == "system"
+        assert "Ran command" in result[0].content
+        assert "Hello, World!" in result[0].content
