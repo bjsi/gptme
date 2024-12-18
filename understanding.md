@@ -1,9 +1,11 @@
 # Current Understanding
 
 - The `execute_shell` function in `gptme/tools/shell.py` is the main entry point for executing shell commands
+  - It requires additional arguments: `args`, `kwargs`, and `confirm`
   - It uses `get_shell_command` to construct the command string
   - Actual execution is done by `execute_shell_impl`
 - `execute_shell_impl` function:
+  - Requires additional arguments: `_` and `confirm`
   - Uses a `ShellSession` object to run the command
   - Captures stdout and stderr
   - Formats the output into a message
@@ -16,8 +18,10 @@
 
 # Questions to Investigate
 
-1. How is the `execute_shell` function called and what parameters does it accept?
-2. What exactly does `get_shell_command` do?
-3. How does `ShellSession` handle command execution and output capturing?
-4. Is there any existing code related to monitoring long-running commands?
-5. How is the `LogManager` integrated with the shell execution process?
+1. What are the `args`, `kwargs`, and `confirm` parameters in `execute_shell` used for?
+2. What is the purpose of the `_` parameter in `execute_shell_impl`?
+3. How does the `confirm` parameter affect the execution of shell commands?
+4. What exactly does `get_shell_command` do?
+5. How does `ShellSession` handle command execution and output capturing?
+6. Is there any existing code related to monitoring long-running commands?
+7. How is the `LogManager` integrated with the shell execution process?
