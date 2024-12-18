@@ -1,5 +1,7 @@
 # Current Understanding
 
+# Questions to Investigate
+
 - The `execute_shell` function in `gptme/tools/shell.py` is the main entry point for executing shell commands
   - It uses `get_shell_command` to construct the command string
   - Actual execution is done by `execute_shell_impl`
