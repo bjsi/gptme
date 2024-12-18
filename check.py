@@ -2,6 +2,7 @@ import sys
 import io
 from contextlib import redirect_stdout
 import pytest
+from unittest.mock import patch, MagicMock
 
 @pytest.fixture
 def setup():
