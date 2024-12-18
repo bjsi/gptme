@@ -171,9 +171,17 @@ def revert_to(hash: str) -> Message:
     output = subprocess.run(["git", "log", "-n", "1", "--oneline"], check=True, capture_output=True, text=True).stdout
     return Message("system", f"Reverted to {output}\n{diff}")
 
+def allow_edit(file_path: str) -> bool:
+    allow_edit = os.environ.get("ALLOW_EDIT")
+    if not allow_edit: return True
+    if file_path in allow_edit.split(','): return True
+    return False
+
 def request_to_patch(file_path: str, region: tuple[int, int], patch_description: str) -> str:
     global _requested
     _requested = patch_description
+    if not allow_edit(file_path):
+        return f"You are not allowed to edit this file.\nYou are allowed to edit:\n{'\n'.join(os.environ.get('ALLOW_EDIT').split(','))}"
     if not os.path.exists(file_path):
         return "Approved creation of new file."
     ctx = FileContext(file_path)

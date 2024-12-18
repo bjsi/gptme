@@ -6,6 +6,7 @@ if [ -z "$1" ]; then
 fi
 
 export ISSUE=$1
+export ALLOW_EDIT="understanding.md"
 
 PROMPT1="You are a code understanding tool. You will think step by step when solving a problem in \`<thinking>\` tags.
 - Gather the context required to deeply understand the following issue: https://github.com/ErikBjare/gptme/issues/\$ISSUE
