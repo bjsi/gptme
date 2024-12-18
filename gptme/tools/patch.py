@@ -37,10 +37,6 @@ patch_content2 = """
 def examples(tool_format):
     return f"""
 > User: patch the hello function in `src/hello.py` to ask for the name of the user.
-> Assistant: Certainly! I'll patch the file:
-{ToolUse("patch", ['src/hello.py', "(11, 13)"], patch_content1).to_output(tool_format)}
-
-> System: You must first request a patch using the `request_to_patch` ipython tool.
 > Assistant: Certainly! I'll request a patch first:
 {ToolUse("ipython", [], "request_to_patch('src/hello.py', region=(11, 13), patch_description='Add a prompt for the user\'s name')").to_output(tool_format)}
 > System: Approved 'Add a prompt for the user's name' within region:
@@ -53,15 +49,12 @@ Are you sure about your intended change? If not, consider an alternative approac
 
 > Assistant: Yes, I should update line 13 to include a prompt for the user's name.
 {ToolUse("patch", ['src/hello.py', '(13, 13)'], patch_content2).to_output(tool_format)}
-> System:
-add 'src/hello.py'
-[issue_10 c1c1e01] Add a prompt for the user's name
-1 file changed, 1 insertion(+), 1 deletion(-)
+> System: Patch applied.
 
-> User: Actually, I don't want to patch that file.
-> Assistant: Okay, I'll revert to the previous commit.
-{ToolUse("ipython", [], "revert_to('c1c1e01~1')").to_output(tool_format)}
-> System: Patch reverted.
+> User: Append an if __name__ == "__main__" block at the end of the file.
+> Assistant: Okay!
+{ToolUse("patch", ['src/hello.py', '(-1, -1)'], "if __name__ == '__main__':\n    Hello().hello()").to_output(tool_format)}
+> System: Patch applied.
 
 > User: create a new file `ideas.txt` with a TODO list.
 > Assistant: Certainly! I'll create the file:
@@ -128,8 +121,12 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     # Apply the patch
     original = open(file_path).read()
     original_lines = original.splitlines()
-    updated_lines = original_lines[:]
-    updated_lines[start-1:end] = patch.splitlines()
+    if start > len(original_lines):
+        original_lines.extend(patch.splitlines())
+        yield Message("system", "Appending patch to end of file.")
+    else:
+        updated_lines = original_lines[:]
+        updated_lines[start-1:end] = patch.splitlines()
     
     # Write the patched content
     with open(file_path, "w") as file:
@@ -217,14 +214,17 @@ def execute_patch(
     """Patch a file."""
     global _requested
     if not _requested:
-        yield Message("system", "You must first request a patch using the `request_to_patch` ipython tool.")
+        yield Message("system", "You must first request a patch.")
         return
     if not os.path.exists(args[0]):
         with open(args[0], "w") as f: f.write(updated_code)
         yield from commit_patch(args[0])
         return
+    code_lines = open(args[0]).read().splitlines()
     region = eval(args[1])
-    original_code = "\n".join(open(args[0]).read().splitlines()[region[0] - 1:region[1]])
+    if region[0] == -1: region[0] = len(code_lines)
+    if region[1] == -1: region[1] = len(code_lines)
+    original_code = "\n".join(code_lines[region[0] - 1:region[1]])
     diff_preview = diff(original_code, updated_code)
     yield from execute_with_confirmation(
         updated_code,

@@ -68,10 +68,10 @@ Let's begin by creating the `check.py` file:
 request_to_patch('check.py', region=(1, 1), patch_description='Initialise the check.py file')
 ```"""
 
-    assistant_msg2 = """Thank you. Now, let's create the `check.py` file:
+    assistant_msg2 = f"""Thank you. Now, let's create the `check.py` file:
 
-```ipython
-request_to_patch('check.py', region=(1, 1), patch_description='Initialise the check.py file')
+```patch check.py (1, 1)
+{init_check_py}
 ```"""
 
     # Create initial messages list
