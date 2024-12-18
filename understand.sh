@@ -10,4 +10,4 @@ SYSTEM_PROMPT="You are a code understanding tool. You will think step by step wh
 - Ignore any TODOs or questions that aren't relevant to the current issue.
 - Do not make changes to the code, only take actions to improve your understanding of the issue."
 export ISSUE
-gptme -n "understand-issue-$ISSUE" -w @log --system "$SYSTEM_PROMPT" --tools gh,search,read,ipython
+gptme -n "understand-issue-$ISSUE" --system "$SYSTEM_PROMPT" --tools gh,search,read,ipython
