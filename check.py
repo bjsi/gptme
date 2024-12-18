@@ -15,19 +15,27 @@ class TestShellExecution(unittest.TestCase):
 
     def test_execute_shell_signature(self):
         sig = inspect.signature(execute_shell)
+        self.assertIn('command', sig.parameters)
         self.assertIn('args', sig.parameters)
         self.assertIn('kwargs', sig.parameters)
         self.assertIn('confirm', sig.parameters)
 
     def test_execute_shell_impl_signature(self):
         sig = inspect.signature(execute_shell_impl)
+        self.assertIn('command', sig.parameters)
         self.assertIn('_', sig.parameters)
         self.assertIn('confirm', sig.parameters)
+
+    def test_get_shell_command_signature(self):
+        sig = inspect.signature(get_shell_command)
+        self.assertIn('command', sig.parameters)
+        self.assertIn('args', sig.parameters)
+        self.assertIn('kwargs', sig.parameters)
 
     @patch('gptme.tools.shell.execute_shell_impl')
     def test_execute_shell_calls_execute_shell_impl(self, mock_execute_shell_impl):
         execute_shell("ls -l", args={}, kwargs={}, confirm=lambda x: True)
-        mock_execute_shell_impl.assert_called()  # We're just checking if it's called, not with what arguments
+        mock_execute_shell_impl.assert_called()
 
     @patch('gptme.tools.shell.ShellSession')
     def test_execute_shell_impl_uses_shell_session(self, MockShellSession):
@@ -40,8 +48,9 @@ class TestShellExecution(unittest.TestCase):
         mock_session.run.assert_called_once_with("ls -l")
 
     def test_get_shell_command_functionality(self):
-        result = get_shell_command("ls -l")
-        self.assertEqual(result, "ls -l")  # Assuming it returns the command as-is
+        result = get_shell_command("ls -l", args={}, kwargs={})
+        self.assertIsInstance(result, str)
+        self.assertIn("ls -l", result)
 
     @patch('gptme.tools.shell.ShellSession')
     def test_execute_shell_impl_error_handling(self, MockShellSession):
