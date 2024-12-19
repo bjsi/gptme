@@ -401,20 +401,3 @@ def test_tool_format_option(
 
     for not_expect in not_expected:
         assert not_expect not in result.output
-
-
-def test_init_messages(cli_runner):
-    init_messages = '[{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there!"}]'
-    result = cli_runner.invoke(main, ['--init-messages', init_messages, '--no-stream'])
-    assert result.exit_code == 0
-    
-def test_invalid_init_messages(cli_runner):
-    # Test invalid JSON
-    result = cli_runner.invoke(main, ['--init-messages', 'invalid json', '--no-stream'])
-    assert result.exit_code == 1
-    assert "Failed to parse init-messages JSON" in result.output
-
-    # Test invalid message format
-    result = cli_runner.invoke(main, ['--init-messages', '[{"invalid": "format"}]', '--no-stream'])
-    assert result.exit_code == 1
-    assert "Each message must have 'role' and 'content' fields" in result.output

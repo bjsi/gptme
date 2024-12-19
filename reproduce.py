@@ -56,14 +56,12 @@ You will think step by step when solving a problem to plan your next action in `
 After you receive feedback on the result of your action, you will reflect on the outcome in `<reflecting>` tags."""
 
     # Assistant messages
-    assistant_msg1 = """Certainly! Let's start by creating the `check.py` file.
-
-<planning>
+    assistant_msg1 = """<planning>
 1. Since we need to write and run tests for each bullet point in the explanation, we should start by creating the `check.py` file.
 2. First let's request a patch to create the `check.py` file.
 </planning>
 
-Let's begin by creating the `check.py` file:
+Certainly! Let's begin by creating the `check.py` file:
 
 ```ipython
 request_to_patch('check.py', region=(1, 1), patch_description='Initialise the check.py file')
