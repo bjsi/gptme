@@ -177,6 +177,7 @@ class ToolSpec:
     available: bool = True
     parameters: list[Parameter] = field(default_factory=list)
     parse_args: Callable[[str], Any] | None = None
+    post_exec_msg: Message | None = None
 
     def __post_init__(self):
         global _tools

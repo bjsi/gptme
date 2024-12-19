@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from gptme.message import Message
 from gptme.tools.base import ToolSpec, ToolUse
 from gptme.tools.file_ctx import FileContext
 
@@ -38,7 +39,8 @@ tool = ToolSpec(
     desc="Read content from a file.",
     instructions=instructions,
     examples=examples,
-    functions=[read]
+    functions=[read],
+    post_exec_msg=Message("system", "Don't forget to do <reflecting> on the result."),
 )
 
 if __name__ == "__main__":

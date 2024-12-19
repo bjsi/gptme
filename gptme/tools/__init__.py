@@ -126,6 +126,9 @@ def execute_msg(msg: Message, confirm: ConfirmFunc) -> Generator[Message, None, 
     for tooluse in ToolUse.iter_from_content(msg.content):
         if tooluse.is_runnable:
             yield from tooluse.execute(confirm)
+            tool = ToolSpec.get_tool(tooluse.tool)
+            if tool.post_exec_msg:
+                yield tool.post_exec_msg
 
 
 # Called often when checking streaming output for executable blocks,

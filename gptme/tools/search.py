@@ -1,5 +1,6 @@
 import os
 import subprocess
+from gptme.message import Message
 from gptme.tools import ToolSpec, ToolUse
 from typing import Dict, List
 from pathlib import Path
@@ -91,6 +92,7 @@ def search(query: str, file_or_dir: str = "."):
 tool = ToolSpec(
     name="search",
     desc="Search the contents of files in the codebase",
+    post_exec_msg=Message("system", "Don't forget to do <reflecting> on the result."),
     instructions=instructions,
     examples=examples,
     functions=[search],
