@@ -40,7 +40,7 @@ tool = ToolSpec(
     instructions=instructions,
     examples=examples,
     functions=[read],
-    post_exec_msg=Message("system", "Don't forget to do <reflecting> on the result."),
+    post_exec_msg=Message("system", "Don't forget to do <reflection> on the result."),
 )
 
 if __name__ == "__main__":

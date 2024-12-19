@@ -53,7 +53,7 @@ When editing and running code:
 - To run tests use pytest in the `shell` tool.
 
 You will think step by step when solving a problem to plan your next action in `<planning>` tags.
-After you receive feedback on the result of your action, you will reflect on the outcome in `<reflecting>` tags."""
+After you receive feedback on the result of your action, you will reflect on the outcome in `<reflection>` tags."""
 
     # Assistant messages
     assistant_msg1 = """<planning>
@@ -67,10 +67,10 @@ Certainly! Let's begin by creating the `check.py` file:
 request_to_patch('check.py', region=(1, 1), patch_description='Initialise the check.py file')
 ```"""
 
-    assistant_msg2 = f"""<reflecting>
+    assistant_msg2 = f"""<reflection>
 <outcome>success</outcome>
 My request to create the `check.py` file was approved.
-</reflecting>
+</reflection>
 
 Thanks for approving the patch.
 

@@ -195,6 +195,7 @@ def request_to_patch(file_path: str, region: tuple[int, int], patch_description:
         return f"{output}"
     ctx = FileContext(file_path)
     if region[1] == -1: region = (region[0], len(ctx.lines))
+    # if region[0] == -1: region = (len(ctx.lines), region[1])
     ctx.show(line_range=region, scope="line", parents="none")
     patch_region = ctx.stringify()
     reminders = "Is this the correct region to overwrite? If not, use `search` or `read` to find the correct region."
@@ -250,7 +251,7 @@ tool = ToolSpec(
     execute=execute_patch,
     block_types=["patch"],
     parse_args=lambda s: [s.split()[1], " ".join(s.split()[2:])],
-    post_exec_msg=Message("system", "Don't forget to do some <reflecting> on the result."),
+    post_exec_msg=Message("system", "Don't forget to do <reflection> on the result."),
     parameters=[
         Parameter(
             name="path",

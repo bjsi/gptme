@@ -49,10 +49,10 @@ request_to_patch('understanding.md', region=(1, 1), patch_description='Initialis
 ```"""
     
     assistant_msg2 = f"""
-<reflecting>
+<reflection>
 <outcome>success</outcome>
 My request to create the `understanding.md` file was approved.
-</reflecting>
+</reflection>
 
 Thanks for approving the patch.
 

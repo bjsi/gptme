@@ -217,7 +217,7 @@ tool = ToolSpec(
         "ipython",
         "py",
     ],
-    post_exec_msg=Message("system", "Don't forget to do <reflecting> on the result."),
+    post_exec_msg=Message("system", "Don't forget to do <reflection> on the result."),
     parameters=[
         Parameter(
             name="code",
