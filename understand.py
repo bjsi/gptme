@@ -5,6 +5,8 @@ import subprocess
 import sys
 import os
 
+from gptme.tools.file_ctx import FileContext
+
 def main():
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <issue>")
@@ -39,11 +41,9 @@ def main():
     assistant_msg1 = f"""Certainly! Let's get started.
 
 <planning>
-1. Since I need to store a running log of my understanding and questions, I should start by creating the `understanding.md` file.
+1. I should start by creating the `understanding.md` file and adding the initial headings.
 2. Let's begin by requesting permission to create the `understanding.md` file.
 </planning>
-
-Let's request permission to create the `understanding.md` file:
 
 ```ipython
 request_to_patch('understanding.md', region=(1, 1), patch_description='Initialise the understanding.md file')
@@ -56,18 +56,16 @@ request_to_patch('understanding.md', region=(1, 1), patch_description='Initialis
 My request to create the `understanding.md` file was approved.
 </reflection>
 
-Now let's move on to the next step.
-
 <planning>
-1. Next we should create the `understanding.md` file.
-2. We need to include the requested headings "Current Understanding" and "Questions to Investigate".
+1. Next we should add the initial headings to the `understanding.md` file.
 </planning>
-
-Let's create the `understanding.md` file:
 
 ```patch understanding.md (1, 1)
 {init_understanding_md}
 ```"""
+    
+    understanding_file_ctx = FileContext("understanding.md")
+    understanding_file_ctx.show(line_range=(1, -1))
 
     # Create initial messages list
     init_messages = [
@@ -75,7 +73,7 @@ Let's create the `understanding.md` file:
         {"role": "assistant", "content": assistant_msg1},
         {"role": "system", "content": "Approved."},
         {"role": "assistant", "content": assistant_msg2},
-        {"role": "system", "content": "Approved."},
+        {"role": "system", "content": f"Patch applied:\n{understanding_file_ctx.stringify()}"},
     ]
 
     # Run gptme command

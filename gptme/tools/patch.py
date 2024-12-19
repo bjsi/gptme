@@ -251,7 +251,7 @@ tool = ToolSpec(
     execute=execute_patch,
     block_types=["patch"],
     parse_args=lambda s: [s.split()[1], " ".join(s.split()[2:])],
-    post_exec_msg=Message("system", "Don't forget to do <reflection> on the result of the action you chose."),
+    post_exec_msg=Message("system", "Don't forget to do a one-sentence <reflection> on the result of the action you chose."),
     parameters=[
         Parameter(
             name="path",

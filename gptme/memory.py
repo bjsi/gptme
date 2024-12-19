@@ -11,6 +11,7 @@ class PlanActionReflect:
     planning: str
     action: str
     reflection: str | None
+    outcome: str | None
     message_index: int
     reflection_index: int | None
 
@@ -18,7 +19,7 @@ class PlanActionReflect:
         """Convert planning/action/reflection to searchable text format"""
         text = f"<planning>{self.planning}\n<action>{self.action}</action>"
         if self.reflection:
-            text += f"\n<reflection>{self.reflection}</reflection>"
+            text += f"\n<reflection>\n<outcome>{self.outcome}</outcome>\n{self.reflection}</reflection>"
         return text
 
 class ThoughtSearcher:
@@ -83,12 +84,15 @@ def extract_plan_action(content: str) -> tuple[str, str] | None:
         action_match.group(1).strip()
     )
 
-def extract_reflection(content: str) -> str | None:
+def extract_reflection(content: str) -> tuple[str, str] | None:
     """Extract reflection content from a message."""
     reflection_match = re.search(r'<reflection>(.*?)</reflection>', content, re.DOTALL)
-    if not reflection_match:
-        return None
-    return reflection_match.group(1).strip()
+    if not reflection_match: return None
+    outcome_match = re.search(r'<outcome>(.*?)</outcome>', content, re.DOTALL)
+    if not outcome_match: return None
+    outcome = outcome_match.group(1).strip()
+    reflection = reflection_match.group(1).strip().replace(f"<outcome>{outcome}</outcome>", "")
+    return outcome, reflection
 
 def get_plan_actions() -> Generator[PlanActionReflect, None, None]:
     """Get all planning+action pairs and their subsequent reflections from conversations."""
@@ -109,7 +113,8 @@ def get_plan_actions() -> Generator[PlanActionReflect, None, None]:
                         timestamp=last_plan_action.timestamp,
                         planning=last_plan_action.planning,
                         action=last_plan_action.action,
-                        reflection=reflection,
+                        reflection=reflection[1],
+                        outcome=reflection[0],
                         message_index=last_plan_action.message_index,
                         reflection_index=i
                     )
@@ -134,6 +139,7 @@ def get_plan_actions() -> Generator[PlanActionReflect, None, None]:
                 planning=planning,
                 action=action,
                 reflection=None,
+                outcome=None,
                 message_index=i,
                 reflection_index=None
             )
@@ -161,11 +167,10 @@ def get_plan_action_reflection_triples(limit: int | None = None) -> list[PlanAct
     return results
 
 if __name__ == "__main__":
-    searcher = ThoughtSearcher()
-    res = searcher.search("<planning>I should write a patch to the file</planning>")
-    for x, score in res:
-        print("SCORE:", score)
+    xs = get_plan_action_reflection_triples(10)
+    for x in xs:
         print("PLAN:", x.planning)
         print("ACTION:", x.action)
         print("REFLECTION:", x.reflection)
+        print("OUTCOME:", x.outcome)
         print("---")
