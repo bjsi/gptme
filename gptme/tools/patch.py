@@ -19,8 +19,9 @@ instructions = """
 Use `patch` to edit files. It can also be used to create new files.
 Keep the patch as small as possible.
 If the patch region overlaps with existing code, it will overwrite the existing code. Include those lines in your patch if you want to keep them.
-Before submitting a patch, request permission to patch using the `request_to_patch` ipython tool in the previous message.
 """.strip()
+if os.environ.get("REQUEST_TO_PATCH"):
+    instructions += "\nBefore submitting a patch, request permission to patch using the `request_to_patch` ipython tool in the previous message."
 
 patch_content1 = """
 class Hello:
@@ -35,7 +36,9 @@ patch_content2 = """
 """
 
 def examples(tool_format):
-    return f"""
+    output = ""
+    if os.environ.get("REQUEST_TO_PATCH"):
+        output += f"""
 > User: patch the hello function in `src/hello.py` to ask for the name of the user.
 > Assistant: Certainly! I'll request a patch first:
 {ToolUse("ipython", [], "request_to_patch('src/hello.py', region=(11, 13), patch_description='Add a prompt for the user\'s name')").to_output(tool_format)}
@@ -45,8 +48,9 @@ def examples(tool_format):
  12│    def hello(self):
  13│        print("Hello World")
 ...⋮...
-Are you sure about your intended change? If not, consider an alternative approach.
-
+Are you sure about your intended change? If not, consider an alternative approach."""
+    else:
+        output += f"""
 > Assistant: Yes, I should update line 13 to include a prompt for the user's name.
 {ToolUse("patch", ['src/hello.py', '(13, 13)'], patch_content2).to_output(tool_format)}
 > System: Patch applied.
@@ -61,6 +65,7 @@ Are you sure about your intended change? If not, consider an alternative approac
 {ToolUse("patch", ['ideas.txt', '(1, 1)'], "TODO: Write a TODO list.").to_output(tool_format)}
 > System: Created new file.
 """.strip()
+    return output
 
 def diff(original: str, updated: str) -> str:
     diff = list(difflib.unified_diff(original.splitlines(), updated.splitlines(), lineterm=""))[3:]
@@ -171,11 +176,11 @@ def commit_patch(file_path: str) -> Generator[Message, None, None]:
     _requested = None
     yield Message("system", output)
 
-def revert_to(hash: str) -> Message:
+def revert_to(commit_hash: str) -> Message:
     current_hash = subprocess.run(["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
-    subprocess.run(["git", "checkout", hash], check=True, capture_output=True, text=True).stdout
+    subprocess.run(["git", "checkout", commit_hash], check=True, capture_output=True, text=True).stdout
     diff = subprocess.run(["git", "diff", current_hash], check=True, capture_output=True, text=True).stdout
-    subprocess.run(["git", "reset", "--hard", hash], check=True, capture_output=True, text=True).stdout
+    subprocess.run(["git", "reset", "--hard", commit_hash], check=True, capture_output=True, text=True).stdout
     output = subprocess.run(["git", "log", "-n", "1", "--oneline"], check=True, capture_output=True, text=True).stdout
     return Message("system", f"Reverted to {output}\n{diff}")
 

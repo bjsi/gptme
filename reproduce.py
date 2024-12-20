@@ -53,7 +53,8 @@ When editing and running code:
 - To run tests use pytest in the `shell` tool.
 
 You will think step by step when solving a problem to plan your next action in `<planning>` tags.
-After you receive feedback on the result of your action, you will reflect on the outcome in `<reflection>` tags. Include the <outcome> tag to indicate whether the action was successful or not. Then write a concise one sentence reflection on the action focusing on whether it was the best choice,"""
+After you receive feedback on the result of your action, reflect on the result in `<outcome>` tags.
+The `<outcome>` should be a one sentence reflection on whether the action was the best choice in this context and what you would do differently next time."""
 
     # Assistant messages
     assistant_msg1 = """Certainly! Let's get started.
@@ -67,10 +68,7 @@ After you receive feedback on the result of your action, you will reflect on the
 request_to_patch('check.py', region=(1, 1), patch_description='Initialise the check.py file')
 ```"""
 
-    assistant_msg2 = f"""<reflection>
-<outcome>success</outcome>
-My request to create the `check.py` file was approved.
-</reflection>
+    assistant_msg2 = f"""<outcome>The `request_to_patch` tool was a good choice because it allowed me to create the `check.py` file.</outcome>
 
 Thanks for approving the patch!
 
