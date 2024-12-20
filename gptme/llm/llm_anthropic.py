@@ -97,6 +97,8 @@ def _stream_with_retry(
 ) -> Generator[str, None, None]:
     """Helper function to handle the streaming with retry logic"""
     from anthropic import NOT_GIVEN  # fmt: skip
+    import anthropic.types  # fmt: skip
+    import anthropic.types.beta.prompt_caching  # fmt: skip
     
     assert _anthropic, "LLM not initialized"
     

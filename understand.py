@@ -31,13 +31,16 @@ def main():
 
     # User prompt
     user_prompt = f"""You are a code understanding tool.
-- Gather the context required to draft a solution to the following issue: https://github.com/ErikBjare/gptme/issues/{issue}
+- Gather the full context required to draft a solution to the following issue: https://github.com/ErikBjare/gptme/issues/{issue}
 - Keep a running log of your "Current Understanding" of the code as a nested markdown list in `understanding.md` with concise bullet points explaining the current behavior from the entrypoint to the relevant part of the codebase.
 - Under that, store a running list of "Questions to Investigate".
 - Get details about the issue using `gh`, and use `search` and `read` tools to build an understanding of the relevant parts of the codebase.
 - Examine each relevant function in detail, expanding context with `read` as you go to understand the problem.
 - Ignore anything that isn't relevant to issue {issue}.
-- Don't make code changes - only overwrite the `understanding.md` file."""
+- Don't make code changes - only overwrite the `understanding.md` file.
+- You will think step by step when solving a problem to plan your next action in `<planning>` tags.
+- After you receive feedback on the result of your action, you will reflect on the outcome in `<reflection>` tags.
+"""
 
     assistant_msg1 = f"""Certainly! Let's get started.
 
