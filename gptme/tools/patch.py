@@ -124,25 +124,58 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     # Convert to Path object if string
     file_path = Path(file_path)
     start, end = region
-    original_lines = open(file_path).read().splitlines()
-    if start == -1: start = len(original_lines)
-    if end == -1: end = len(original_lines)
-    print(f"start: {start}, end: {end}")
-    
     # Run pylint before patch
     before_lint = run_pylint_errors(file_path)
+
+    # Handle new file creation
+    if not file_path.exists():
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(patch)  # Remove trailing newline for new files
+        yield Message("system", f"Created new file {file_path}")
+        return  # Add return here to prevent further processing
+
+    # Read existing file
+    with open(file_path, encoding="utf-8") as f:
+        content = f.read()
+    original_lines = content.splitlines()
+    
+    # Handle (-1, -1) case - append to end
+    if start == -1 and end == -1:
+        start = len(original_lines) + 1
+        end = start
+    
+    # Handle (<=1, -1) case - replace entire file
+    elif start <= 1 and end == -1:
+        updated_content = patch
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(updated_content)
+        return  # Add return here for complete file replacement
+    
+    # Handle beyond file length case
+    elif start > len(original_lines):
+        start = len(original_lines) + 1
+        end = start
+
+    # Preserve trailing newline if it existed
+    had_trailing_newline = content.endswith("\n")
     
     # Apply the patch
     updated_lines = original_lines[:]
-    if start > len(original_lines):
-        updated_lines.extend(patch.splitlines())
-        yield Message("system", "Appending patch to end of file.")
+    if start > len(updated_lines):
+        updated_lines.append(patch)
     else:
-        updated_lines[start-1:end] = patch.splitlines()
+        # Handle empty string patch by converting it to a single empty line
+        patch_lines = patch.splitlines() if patch else [""]
+        updated_lines[start-1:end] = patch_lines
     
     # Write the patched content
-    with open(file_path, "w") as file:
-        file.write("\n".join(updated_lines))
+    updated_content = "\n".join(updated_lines)
+    if had_trailing_newline:
+        updated_content += "\n"
+        
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(updated_content)
     
     # Run pylint after patch
     after_lint = run_pylint_errors(file_path)
@@ -226,7 +259,7 @@ def execute_patch(
 ) -> Generator[Message, None, None]:
     """Patch a file."""
     global _requested
-    if not _requested:
+    if os.environ.get("REQUEST_TO_PATCH") and not _requested:
         yield Message("system", "You must first request a patch.")
         return
     if not os.path.exists(args[0]):
@@ -267,7 +300,6 @@ tool = ToolSpec(
     execute=execute_patch,
     block_types=["patch"],
     parse_args=lambda s: [s.split()[1], " ".join(s.split()[2:])],
-    # post_exec_msg=Message("system", "Don't forget to do <reflection> on the result of the action you chose."),
     parameters=[
         Parameter(
             name="path",

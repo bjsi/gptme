@@ -15,7 +15,7 @@ class PlanActionOutcome:
     outcome_index: int | None
 
     def to_searchable_text(self) -> str:
-        """Convert planning/action/reflection to searchable text format"""
+        """Convert planning/action/outcome to searchable text format"""
         text = f"<planning>{self.planning}\n<action>{self.action}</action>"
         if self.outcome:
             text += f"\n<outcome>{self.outcome}</outcome>"
@@ -30,13 +30,13 @@ class ThoughtSearcher:
 
     @property
     def plan_actions(self) -> List[PlanActionOutcome]:
-        """Lazy load and cache planning/action/reflection triplets"""
+        """Lazy load and cache planning/action/outcome triplets"""
         if self._plan_actions is None:
             self._plan_actions = get_plan_action_outcome_triples()
         return self._plan_actions
 
     def encode_thoughts(self):
-        """Encode all planning/action/reflection triplets for search"""
+        """Encode all planning/action/outcome triplets for search"""
         if self._encoded:
             return
             
@@ -48,19 +48,19 @@ class ThoughtSearcher:
         self._encoded = True
 
     def search(self, query: str, k: int = 3) -> List[tuple[PlanActionOutcome, float]]:
-        """Search for planning/action/reflection triplets relevant to query
+        """Search for planning/action/outcome triplets relevant to query
         
         Args:
             query: Search query string
             k: Number of results to return
             
         Returns:
-            List of tuples containing PlanActionReflect objects and their similarity scores
+            List of tuples containing PlanActionOutcome objects and their similarity scores
         """
         self.encode_thoughts()
         results = self.rag.search_encoded_docs(query, k=k)
         
-        # Map search results back to PlanActionReflect objects with scores
+        # Map search results back to PlanActionOutcome objects with scores
         matches = []
         for result in results:
             idx = result["document_metadata"]["index"]
@@ -91,7 +91,7 @@ def extract_outcome(content: str) -> tuple[str, str] | None:
     return outcome
 
 def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
-    """Get all planning+action pairs and their subsequent reflections from conversations."""
+    """Get all planning+action pairs and their subsequent outcomes from conversations."""
     for conv in get_conversations():
         log = Log.read_jsonl(conv.path)
         messages = list(log)  # Convert to list to allow looking ahead
@@ -99,11 +99,11 @@ def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
         last_plan_action = None
         
         for i, msg in enumerate(messages):
-            # Check for reflection first
+            # Check for outcome first
             if '<outcome>' in msg.content:
                 outcome = extract_outcome(msg.content)
                 if outcome and last_plan_action:
-                    # Update the last plan action with this reflection
+                    # Update the last plan action with this outcome
                     last_plan_action = PlanActionOutcome(
                         conversation_id=last_plan_action.conversation_id,
                         timestamp=last_plan_action.timestamp,
@@ -127,7 +127,7 @@ def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
                 
             planning, action = result
             
-            # Create new PlanActionReflect without reflection
+            # Create new PlanActionOutcome without outcome
             last_plan_action = PlanActionOutcome(
                 conversation_id=conv.name,
                 timestamp=msg.timestamp,
@@ -138,7 +138,7 @@ def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
                 outcome_index=None
             )
             
-        # Yield the last plan action if it exists and has no reflection
+        # Yield the last plan action if it exists and has no outcome
         if last_plan_action:
             yield last_plan_action
 
@@ -161,7 +161,7 @@ def get_plan_action_outcome_triples(limit: int | None = None) -> list[PlanAction
     return results
 
 if __name__ == "__main__":
-    xs = get_plan_action_outcome_triples(10)
+    xs = get_plan_action_outcome_triples()
     for x in xs:
         print("PLAN:", x.planning)
         print("ACTION:", x.action)

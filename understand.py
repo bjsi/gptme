@@ -87,7 +87,7 @@ request_to_patch('understanding.md', region=(1, 1), patch_description='Initialis
 ```patch understanding.md (1, 1)
 {init_understanding_md}
 ```"""
-        assistant_msg2 = """<outcome>My use of the `patch` tool was a good choice, based on the contents of the file the patch was applied successfully.</outcome>
+        assistant_msg2 = f"""<outcome>My use of the `patch` tool was correct. Based on the contents of the file the patch was applied successfully.</outcome>
 
 That looks correct! Now I'll start gathering context.
 
@@ -99,13 +99,14 @@ That looks correct! Now I'll start gathering context.
 ```ipython
 gh issue view {issue}
 ```"""
-
-        # Create initial messages list
+        
+        res = subprocess.run(["gh", "issue", "view", issue], capture_output=True, text=True).stdout
         init_messages = [
             {"role": "user", "content": user_prompt},
             {"role": "assistant", "content": assistant_msg1},
             {"role": "system", "content": f"Patch applied:\n{understanding_file_ctx.stringify()}"},
             {"role": "assistant", "content": assistant_msg2},
+            {"role": "system", "content": f"```stdout\n{res}\n```"},
         ]
 
     # Run gptme command

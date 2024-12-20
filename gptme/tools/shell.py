@@ -442,7 +442,6 @@ tool = ToolSpec(
     examples=examples,
     execute=execute_shell,
     block_types=["shell"],
-    # post_exec_msg=Message("system", "Don't forget to do <reflection> on the result of the action you chose."),
     parameters=[
         Parameter(
             name="command",
