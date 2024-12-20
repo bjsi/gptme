@@ -18,6 +18,7 @@ def main():
     os.environ["ISSUE"] = issue
     os.environ["ALLOW_EDIT"] = "understanding.md"
     os.environ["POST_PATCH_MSG"] = f"Are you sure your explanation and questions are relevant to issue {issue}?"
+    os.environ["REQUEST_TO_PATCH"] = "1"
 
     init_understanding_md = """# Current Understanding
 

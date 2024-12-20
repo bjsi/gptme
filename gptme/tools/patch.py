@@ -111,16 +111,23 @@ _requested = None
 # reject_error_types = ['syntax-error', 'invalid-syntax', 'missing-parentheses', 'missing-final-newline', 'mixed-indentation', 'trailing-whitespace', 'unexpected-indentation', 'bad-indentation', 'bad-whitespace', 'mixed-line-endings']
 
 def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
+    global _requested
+    if os.environ.get("REQUEST_TO_PATCH") and not _requested:
+        yield Message("system", "You must first request a patch.")
+        return
+
     # Convert to Path object if string
     file_path = Path(file_path)
     start, end = region
+    original_lines = open(file_path).read().splitlines()
+    if start == -1: start = len(original_lines)
+    if end == -1: end = len(original_lines)
+    print(f"start: {start}, end: {end}")
     
     # Run pylint before patch
     before_lint = run_pylint_errors(file_path)
     
     # Apply the patch
-    original = open(file_path).read()
-    original_lines = original.splitlines()
     updated_lines = original_lines[:]
     if start > len(original_lines):
         updated_lines.extend(patch.splitlines())
@@ -145,7 +152,7 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     _requested = None
     yield from commit_patch(file_path)
     ctx = FileContext(file_path)
-    ctx.show(line_range=(region[0], max(region[1], region[0] + len(patch.splitlines()))), scope="line", parents="none")
+    ctx.show(line_range=(start, start + len(patch.splitlines()) - 1), scope="line", parents="none")
     diff = ctx.stringify()
     yield Message("system", f"Updated region:\n{diff}")
     if new_errors:
@@ -242,16 +249,20 @@ def execute_patch(
         allow_edit=True,
     )
 
+functions = [request_to_patch, revert_to]
+if not os.environ.get("REQUEST_TO_PATCH"):
+    functions.remove(request_to_patch)
+
 tool = ToolSpec(
     name="patch",
     desc="Apply a patch to a file",
     instructions=instructions,
     examples=examples,
-    functions=[request_to_patch, revert_to],
+    functions=functions,
     execute=execute_patch,
     block_types=["patch"],
     parse_args=lambda s: [s.split()[1], " ".join(s.split()[2:])],
-    post_exec_msg=Message("system", "Don't forget to do <reflection> on the result of the action you chose."),
+    # post_exec_msg=Message("system", "Don't forget to do <reflection> on the result of the action you chose."),
     parameters=[
         Parameter(
             name="path",

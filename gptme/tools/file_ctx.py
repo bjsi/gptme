@@ -101,7 +101,7 @@ class FileContext:
             if line_range[1] == -1: line_range = (line_range[0], len(self.lines) - 1)
             if line_range[0] == -1: line_range = (len(self.lines) - 1, line_range[1])
             nodes = [self.node_for_line(line) for line in range(line_range[0], line_range[1] + 1)]
-            self.show_indices.update(range(line_range[0], line_range[1] + 1))
+            self.show_indices.update(range(line_range[0] -1, line_range[1]))
             # scope = "full"
         else: print("No line, name or definition provided"); return self
         for node in nodes:

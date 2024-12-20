@@ -1,5 +1,6 @@
 import base64
 import logging
+import time
 from collections.abc import Generator
 from pathlib import Path
 from typing import (
@@ -13,6 +14,14 @@ from typing import (
 from ..constants import TEMPERATURE, TOP_P
 from ..message import Message, msgs2dicts
 from ..tools.base import Parameter, ToolSpec
+from tenacity import (
+    retry,
+    stop_after_attempt, 
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log
+)
+from anthropic import APIStatusError
 
 if TYPE_CHECKING:
     # noreorder
@@ -71,18 +80,26 @@ def chat(messages: list[Message], model: str, tools: list[ToolSpec] | None) -> s
     return content[0].text  # type: ignore
 
 
-def stream(
-    messages: list[Message], model: str, tools: list[ToolSpec] | None
+def _is_overloaded_error(exception: Exception) -> bool:
+    """Check if the error is an overloaded error from Anthropic API"""
+    if isinstance(exception, APIStatusError):
+        error_dict = getattr(exception, "body", {})
+        if isinstance(error_dict, dict):
+            error = error_dict.get("error", {})
+            return error.get("type") == "overloaded_error"
+    return False
+
+def _stream_with_retry(
+    messages_dicts: list,
+    system_messages: list,
+    tools_dict: list | None,
+    model: str,
 ) -> Generator[str, None, None]:
-    import anthropic.types  # fmt: skip
-    import anthropic.types.beta.prompt_caching  # fmt: skip
+    """Helper function to handle the streaming with retry logic"""
     from anthropic import NOT_GIVEN  # fmt: skip
-
+    
     assert _anthropic, "LLM not initialized"
-    messages_dicts, system_messages, tools_dict = _prepare_messages_for_api(
-        messages, tools
-    )
-
+    
     with _anthropic.beta.prompt_caching.messages.stream(
         model=model,
         messages=messages_dicts,
@@ -133,6 +150,24 @@ def stream(
                 case _:
                     # print(f"Unknown chunk type: {chunk.type}")
                     pass
+
+@retry(
+    retry=retry_if_exception_type(_is_overloaded_error),
+    wait=wait_exponential(multiplier=1, min=4, max=60),
+    stop=stop_after_attempt(5),
+    before_sleep=before_sleep_log(logger, logging.WARNING)
+)
+def stream(
+    messages: list[Message], model: str, tools: list[ToolSpec] | None
+) -> Generator[str, None, None]:
+    import anthropic.types  # fmt: skip
+    import anthropic.types.beta.prompt_caching  # fmt: skip
+
+    messages_dicts, system_messages, tools_dict = _prepare_messages_for_api(
+        messages, tools
+    )
+
+    yield from _stream_with_retry(messages_dicts, system_messages, tools_dict, model)
 
 
 def _handle_files(message_dicts: list[dict]) -> list[dict]:
