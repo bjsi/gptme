@@ -348,6 +348,14 @@ def _format_block_smart(header: str, cmd: str, lang="") -> str:
     return s
 
 
+def _strip_dates(line: str) -> str:
+    # strip iso8601 timestamps
+    line = re.sub(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[.]\d{3,9}Z?", "", line)
+    # strip dates like "2017-08-02 08:48:43 +0000 UTC"
+    line = re.sub(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}( [+]\d{4})?( UTC)?", "", line)
+    return line
+
+
 def _shorten_stdout(
     stdout: str,
     pre_lines=None,
@@ -359,18 +367,8 @@ def _shorten_stdout(
 ) -> str:
     lines = stdout.split("\n")
 
-    # NOTE: This can cause issues when, for example, reading a CSV with dates in the first column
     if strip_dates:
-        # strip iso8601 timestamps
-        lines = [
-            re.sub(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[.]\d{3,9}Z?", "", line)
-            for line in lines
-        ]
-        # strip dates like "2017-08-02 08:48:43 +0000 UTC"
-        lines = [
-            re.sub(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}( [+]\d{4})?( UTC)?", "", line)
-            for line in lines
-        ]
+        lines = [_strip_dates(line) for line in lines]
 
     # strip common prefixes, useful for things like `gh runs view`
     if strip_common_prefix_lines and len(lines) >= strip_common_prefix_lines:
