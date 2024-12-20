@@ -14,4 +14,3 @@
 - How can we periodically check the status of a running command?
 - How can we add messages to the conversation log during command execution?
 - What's the best way to implement the option to kill a running command?
-# Questions to Investigate
