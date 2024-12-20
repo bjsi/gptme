@@ -53,7 +53,7 @@ When editing and running code:
 - To run tests use pytest in the `shell` tool.
 
 You will think step by step when solving a problem to plan your next action in `<planning>` tags.
-After you receive feedback on the result of your action, you will reflect on the outcome in `<reflection>` tags."""
+After you receive feedback on the result of your action, you will reflect on the outcome in `<reflection>` tags. Include the <outcome> tag to indicate whether the action was successful or not. Then write a concise one sentence reflection on the action focusing on whether it was the best choice,"""
 
     # Assistant messages
     assistant_msg1 = """Certainly! Let's get started.
