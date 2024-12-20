@@ -145,7 +145,7 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     _requested = None
     yield from commit_patch(file_path)
     ctx = FileContext(file_path)
-    ctx.show(line_range=region, scope="line", parents="none")
+    ctx.show(line_range=(region[0], max(region[1], region[0] + len(patch.splitlines()))), scope="line", parents="none")
     diff = ctx.stringify()
     yield Message("system", f"Updated region:\n{diff}")
     if new_errors:
