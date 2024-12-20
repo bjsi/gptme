@@ -29,4 +29,3 @@
 6. What's the best way to add the status updates to the conversation log?
 7. How should we handle the case where a command finishes before the 10-second check?
 8. Should we implement a timeout feature for commands, and if so, how?
-# Questions to Investigate
