@@ -11,6 +11,7 @@ class PlanActionOutcome:
     planning: str
     action: str
     outcome: str | None
+    score: float | None
     message_index: int
     outcome_index: int | None
 
@@ -18,7 +19,7 @@ class PlanActionOutcome:
         """Convert planning/action/outcome to searchable text format"""
         text = f"<planning>{self.planning}\n<action>{self.action}</action>"
         if self.outcome:
-            text += f"\n<outcome>{self.outcome}</outcome>"
+            text += f"\n<outcome><score>{self.score}</score>{self.outcome}</outcome>"
         return text
 
 class ThoughtSearcher:
@@ -27,6 +28,15 @@ class ThoughtSearcher:
         self.rag = RAGPretrainedModel.from_pretrained("colbert-ir/colbertv2.0")
         self._plan_actions: List[PlanActionOutcome] | None = None
         self._encoded = False
+
+    # def create_index(self):
+    #    self.rag.index(
+    #     collection=[full_document], 
+    #     document_ids=['miyazaki'],
+    #     document_metadatas=[{"entity": "person", "source": "wikipedia"}],
+    #     index_name="Miyazaki", 
+    #     max_document_length=180, 
+    #     split_documents=True)
 
     @property
     def plan_actions(self) -> List[PlanActionOutcome]:
@@ -83,12 +93,36 @@ def extract_plan_action(content: str) -> tuple[str, str] | None:
         action_match.group(1).strip()
     )
 
-def extract_outcome(content: str) -> tuple[str, str] | None:
-    """Extract outcome content from a message."""
+def extract_outcome(content: str) -> tuple[str, float] | None:
+    """Extract outcome content and score from a message.
+    
+    Returns:
+        Tuple of (outcome text, score) or None if no match
+    """
     outcome_match = re.search(r'<outcome>(.*?)</outcome>', content, re.DOTALL)
-    if not outcome_match: return None
+    if not outcome_match: 
+        return None
+        
     outcome = outcome_match.group(1).strip()
-    return outcome
+    
+    # Extract score - expecting a float between -1 and 1
+    score_match = re.search(r'<score>(-?\d*\.?\d+)</score>', outcome)
+    if not score_match:
+        return None
+    
+    try:
+        score = float(score_match.group(1))
+        if score < -1 or score > 1:
+            return None
+    except ValueError:
+        return None
+        
+    # The reflection should be everything after the score
+    outcome_text = outcome[score_match.end():].strip()
+    if not outcome_text:
+        return None
+        
+    return (outcome_text, score)
 
 def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
     """Get all planning+action pairs and their subsequent outcomes from conversations."""
@@ -101,15 +135,17 @@ def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
         for i, msg in enumerate(messages):
             # Check for outcome first
             if '<outcome>' in msg.content:
-                outcome = extract_outcome(msg.content)
-                if outcome and last_plan_action:
+                outcome_data = extract_outcome(msg.content)
+                if outcome_data and last_plan_action:
+                    outcome_text, score = outcome_data
                     # Update the last plan action with this outcome
                     last_plan_action = PlanActionOutcome(
                         conversation_id=last_plan_action.conversation_id,
                         timestamp=last_plan_action.timestamp,
                         planning=last_plan_action.planning,
                         action=last_plan_action.action,
-                        outcome=outcome,
+                        outcome=outcome_text,
+                        score=score,
                         message_index=last_plan_action.message_index,
                         outcome_index=i
                     )
@@ -134,6 +170,7 @@ def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
                 planning=planning,
                 action=action,
                 outcome=None,
+                score=None,
                 message_index=i,
                 outcome_index=None
             )
@@ -166,4 +203,26 @@ if __name__ == "__main__":
         print("PLAN:", x.planning)
         print("ACTION:", x.action)
         print("OUTCOME:", x.outcome)
+        print("SCORE:", x.score)
         print("---")
+    # searcher = ThoughtSearcher()
+    # xs = searcher.search("success", 1)
+    # for x, score in xs:
+    #     print("PLAN:", x.planning)
+    #     print("ACTION:", x.action)
+    #     print("OUTCOME:", x.outcome)
+    #     print("SCORE:", score)
+    #     print("---")
+    # print()
+    # print()
+    # print()
+    # print()
+    # print()
+
+    # xs = searcher.search("failure", 1)
+    # for x, score in xs:
+    #     print("PLAN:", x.planning)
+    #     print("ACTION:", x.action)
+    #     print("OUTCOME:", x.outcome)
+    #     print("SCORE:", score)
+    #     print("---")    

@@ -36,7 +36,7 @@ def main():
     user_prompt = f"""You are a code understanding tool.
 - Gather the full context required to draft a solution to the following issue: https://github.com/ErikBjare/gptme/issues/{issue}
 - Keep a running log of your "Current Understanding" of the code as a nested markdown list in `understanding.md` with concise bullet points explaining the current behavior from the entrypoint to the relevant part of the codebase.
-- Under that, store a running list of "Questions to Investigate".
+- Under that, store a running list of "Questions to Investigate". Don't add any new headings.
 - Get details about the issue using `gh`, and use `search` and `read` tools to build an understanding of the relevant parts of the codebase.
 - Examine each relevant function in detail, expanding context with `read` as you go to understand the problem.
 - Ignore anything that isn't relevant to issue {issue}.
@@ -44,7 +44,7 @@ def main():
 
 You will think step by step when solving a problem to plan your next action in `<planning>` tags.
 After you receive feedback on the result of your action, reflect on the result in `<outcome>` tags.
-The `<outcome>` should be a one sentence reflection on whether the action was the best choice in this context and what you would do differently next time."""
+The `<outcome>` should include a score between -1 and 1 and a one sentence reflection on whether the action was the best choice and what you would do differently next time."""
     
     if os.environ.get("REQUEST_TO_PATCH"):
         assistant_msg1 = f"""Certainly! Let's get started.
@@ -81,13 +81,13 @@ request_to_patch('understanding.md', region=(1, 1), patch_description='Initialis
         assistant_msg1 = f"""Certainly! Let's get started.
 
 <planning>
-1. I should start by creating the `understanding.md` file and adding the initial headings.
+1. I should start by creating the `understanding.md` file and adding the headings.
 </planning>
 
 ```patch understanding.md (1, 1)
 {init_understanding_md}
 ```"""
-        assistant_msg2 = f"""<outcome>My use of the `patch` tool was correct. Based on the contents of the file the patch was applied successfully.</outcome>
+        assistant_msg2 = f"""<outcome><score>1.0</score>My use of the `patch` tool was correct. Based on the contents of the file the patch was applied successfully.</outcome>
 
 That looks correct! Now I'll start gathering context.
 
@@ -96,7 +96,7 @@ That looks correct! Now I'll start gathering context.
 2. Then I should use the `search` and `read` tools to search for relevant parts of the codebase.
 </planning>
 
-```ipython
+```shell
 gh issue view {issue}
 ```"""
         
