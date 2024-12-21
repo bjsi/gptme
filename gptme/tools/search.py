@@ -1,6 +1,4 @@
-import os
 import subprocess
-from gptme.message import Message
 from gptme.tools import ToolSpec, ToolUse
 from typing import Dict, List
 from pathlib import Path
@@ -68,17 +66,17 @@ def search_file_names(query: str, directory: str = "."):
     output = p2.communicate()[0]
     return output.strip()
 
-def search(query: str, file_or_dir: str = "."):
+def search(query: str):
     file_contents = subprocess.run(
-        ["rga", "--line-number", "--no-heading", "-e", query, file_or_dir],
+        ["rga", "--line-number", "--no-heading", "-e", query, '.'],
         capture_output=True,
         text=True
     )
-    file_names = search_file_names(query, file_or_dir)
+    file_names = search_file_names(query, '.')
     file_name_results = f"File name matches:\n{file_names}\n" + '-' * 80 + "\n"
-    if os.path.isfile(file_or_dir):
-        # If directory is a single file, prepend filename to each line
-        file_contents.stdout = "\n".join(f"{file_or_dir}:{line}" for line in file_contents.stdout.splitlines())
+    # if os.path.isfile(file_or_dir):
+    #     # If directory is a single file, prepend filename to each line
+    #     file_contents.stdout = "\n".join(f"{file_or_dir}:{line}" for line in file_contents.stdout.splitlines())
     parsed = parse_search_results(file_contents.stdout)
     output = ""
     num_results = len(parsed.keys())

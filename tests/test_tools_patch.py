@@ -43,6 +43,14 @@ def test_patch_empty_file(temp_file):
             assert f.read() == "new content"
 
 
+def test_patch_multiple_lines_into_single_line(temp_file):
+    content = "line1\nline2\nline3"
+    with temp_file(content) as f:
+        list(patch(f, (2, 2), "new_line\nnew_line2\nnew_line3"))
+        with open(f, encoding="utf-8") as f:
+            assert f.read() == "line1\nnew_line\nnew_line2\nnew_line3\nline3"
+
+
 def test_patch_beyond_file_length(temp_file):
     content = "single line"
     # Test patching beyond file length
@@ -209,3 +217,10 @@ line5"""
             assert f.read() == """line1
 
 line5"""
+
+def test_patch_replace_middle_to_end(temp_file):
+    content = "line1\nline2\nline3\nline4\nline5\nline6"
+    with temp_file(content) as f:
+        list(patch(f, (3, -1), "new_line1\nnew_line2"))
+        with open(f, encoding="utf-8") as f:
+            assert f.read() == "line1\nline2\nnew_line1\nnew_line2"

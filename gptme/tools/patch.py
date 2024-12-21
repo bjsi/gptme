@@ -115,6 +115,21 @@ _requested = None
 
 # reject_error_types = ['syntax-error', 'invalid-syntax', 'missing-parentheses', 'missing-final-newline', 'mixed-indentation', 'trailing-whitespace', 'unexpected-indentation', 'bad-indentation', 'bad-whitespace', 'mixed-line-endings']
 
+def yield_messages(file_path: str | Path, start: int, patch: str, new_errors: List[LintError]) -> Generator[Message, None, None]:
+    global _requested
+    _requested = None
+    yield from commit_patch(file_path)
+    ctx = FileContext(file_path)
+    ctx.show(line_range=(start, start + len(patch.splitlines()) - 1), scope="line", parents="none")
+    diff = ctx.stringify()
+    yield Message("system", f"Updated region:\n{diff}")
+    if new_errors:
+        yield Message("system", "⚠️ Warning: New errors introduced in patched region:")
+        for error in sorted(new_errors):
+            yield Message("system", f"  Line {error.line}: {error.message}")
+    if os.environ.get("POST_PATCH_MSG"): yield Message("system", os.environ.get("POST_PATCH_MSG"))
+    yield Message("system", "If you notice errors, you can correct them or revert the patch using the `revert_to` tool.")
+
 def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
     global _requested
     if os.environ.get("REQUEST_TO_PATCH") and not _requested:
@@ -132,8 +147,8 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
         file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(patch)  # Remove trailing newline for new files
-        yield Message("system", f"Created new file {file_path}")
-        return  # Add return here to prevent further processing
+        yield from yield_messages(file_path, start, patch, [])
+        return
 
     # Read existing file
     with open(file_path, encoding="utf-8") as f:
@@ -141,7 +156,7 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     original_lines = content.splitlines()
     
     # Handle (-1, -1) case - append to end
-    if start == -1 and end == -1:
+    if (start == -1 or start > len(original_lines)):
         start = len(original_lines) + 1
         end = start
     
@@ -150,13 +165,12 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
         updated_content = patch
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(updated_content)
-        return  # Add return here for complete file replacement
+        yield from yield_messages(file_path, start, patch, [])
+        return
     
-    # Handle beyond file length case
-    elif start > len(original_lines):
-        start = len(original_lines) + 1
-        end = start
-
+    if end == -1: end = len(original_lines) + 1
+    # Preserve trailing newline if it existed
+    had_trailing_newline = content.endswith("\n")
     # Preserve trailing newline if it existed
     had_trailing_newline = content.endswith("\n")
     
@@ -186,19 +200,8 @@ def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generat
     
     # Find new errors that weren't present before
     new_errors = after_errors - before_errors
+    yield from yield_messages(file_path, start, patch, new_errors)
     
-    _requested = None
-    yield from commit_patch(file_path)
-    ctx = FileContext(file_path)
-    ctx.show(line_range=(start, start + len(patch.splitlines()) - 1), scope="line", parents="none")
-    diff = ctx.stringify()
-    yield Message("system", f"Updated region:\n{diff}")
-    if new_errors:
-        yield Message("system", "⚠️ Warning: New errors introduced in patched region:")
-        for error in sorted(new_errors):
-            yield Message("system", f"  Line {error.line}: {error.message}")
-    if os.environ.get("POST_PATCH_MSG"): yield Message("system", os.environ.get("POST_PATCH_MSG"))
-    yield Message("system", "If you notice errors, you can correct them or revert the patch using the `revert_to` tool.")
 
 def commit_patch(file_path: str) -> Generator[Message, None, None]:
     global _requested
