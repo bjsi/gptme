@@ -44,7 +44,7 @@ def main():
 
 You will think step by step when solving a problem to plan your next action in `<planning>` tags.
 After you receive feedback on the result of your action, reflect on the result in `<outcome>` tags.
-The `<outcome>` should include a score between -1 and 1 and a one sentence reflection on whether the action was the best choice and what you would do differently next time."""
+The `<outcome>` should include a score between -1 and 1 and a one sentence reflection on whether the action was the best choice in this context and what you would do differently next time."""
     
     if os.environ.get("REQUEST_TO_PATCH"):
         assistant_msg1 = f"""Certainly! Let's get started.
@@ -112,9 +112,9 @@ gh issue view {issue}
     # Run gptme command
     subprocess.run([
         "gptme", 
-        "-n", f"understand-issue-{issue}", 
+        # "-n",
         "--tools", "gh,search,read,ipython,patch",
-        "--init-messages", json.dumps(init_messages)
+        "--init-messages", json.dumps(init_messages),
     ])
 
 if __name__ == "__main__":

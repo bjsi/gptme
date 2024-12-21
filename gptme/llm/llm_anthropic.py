@@ -110,8 +110,11 @@ def _stream_with_retry(
         top_p=TOP_P,
         max_tokens=4096,
         tools=tools_dict if tools_dict else NOT_GIVEN,
+        stop_sequences=["</planning>"],
     ) as stream:
         for chunk in stream:
+            if hasattr(chunk, "stop_reason"):
+                print(f"stop reason: {chunk} {chunk.type}")
             match chunk.type:
                 case "content_block_start":
                     chunk = cast(anthropic.types.RawContentBlockStartEvent, chunk)
@@ -145,8 +148,10 @@ def _stream_with_retry(
                     )
                     logger.debug(chunk.message.usage)
                 case "message_delta":
-                    chunk = cast(anthropic.types.MessageDeltaEvent, chunk)
+                    chunk = cast(anthropic.types.RawMessageDeltaEvent, chunk)
                     logger.debug(chunk.usage)
+                    if chunk.delta.stop_reason == "stop_sequence":
+                        yield chunk.delta.stop_sequence
                 case "message_stop":
                     pass
                 case _:

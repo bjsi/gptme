@@ -1,17 +1,15 @@
 # Current Understanding
-# Current Understanding
 
 - Issue #348 requests a feature to monitor and optionally interrupt long-running commands
 - The feature should:
-  - Add a message to the conversation log every 10 seconds
-  - Provide context about what the command is doing
-  - Check if the command is still running
-  - Ask whether to kill the command
+  - Monitor shell commands every 10 seconds
+  - Add context about the command's status to the conversation log
+  - Provide an option to kill the command
 
 # Questions to Investigate
 
-- How are shell commands currently executed in the codebase?
-- Is there an existing mechanism for monitoring running commands?
-- Where in the codebase would be the best place to implement this feature?
-- How can we implement a non-blocking way to check if a command is still running?
-- How can we safely interrupt a running command?
+- Where in the codebase are shell commands executed?
+- Is there an existing mechanism for monitoring command execution?
+- How is the conversation log currently implemented?
+- What method is used to execute shell commands?
+- Is there an existing timeout or interrupt mechanism for commands?

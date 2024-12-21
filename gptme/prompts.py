@@ -107,6 +107,7 @@ All code blocks you suggest will be automatically executed.
 Do not provide examples or ask for permission before running commands.
 Proceed directly with the most appropriate actions to complete the task.
 """.strip()
+    interactive_prompt = non_interactive_prompt
 
     full_prompt = (
         base_prompt
