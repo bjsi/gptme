@@ -150,3 +150,36 @@ def test_toolcall_regex_invalid(content):
     # No ToolUse should be created for invalid content
     tool_uses = list(ToolUse.iter_from_content(content))
     assert len(tool_uses) == 0
+
+def test_xml():
+    content = """
+<tool-use>
+<patch args='understanding.md (3, 3)'>
+- The `execute_shell` function in `gptme/tools/shell.py` is the main entry point for executing shell commands.
+- It uses `get_shell_command` to construct the command string.
+- The `execute_shell_impl` function is responsible for running the shell command and formatting the output.
+- The `ShellSession` class in `gptme/tools/shell.py` contains the `run` method which actually executes the shell command.
+
+# Questions to Investigate
+- How does the `ShellSession.run` method handle long-running commands?
+- Is there a mechanism in place to monitor the execution time of shell commands?
+- How can we add a feature to monitor and optionally interrupt long-running commands?
+</patch>
+</tool-use>
+"""
+    tool_use = list(ToolUse.iter_from_content(content))
+    assert len(tool_use) == 1
+    tool_use = tool_use[0]
+    assert tool_use.tool == "patch"
+    assert tool_use.args == ["understanding.md (3, 3)"]
+    assert tool_use.content == """
+- The `execute_shell` function in `gptme/tools/shell.py` is the main entry point for executing shell commands.
+- It uses `get_shell_command` to construct the command string.
+- The `execute_shell_impl` function is responsible for running the shell command and formatting the output.
+- The `ShellSession` class in `gptme/tools/shell.py` contains the `run` method which actually executes the shell command.
+
+# Questions to Investigate
+- How does the `ShellSession.run` method handle long-running commands?
+- Is there a mechanism in place to monitor the execution time of shell commands?
+- How can we add a feature to monitor and optionally interrupt long-running commands?
+""".strip()

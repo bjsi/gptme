@@ -7,12 +7,15 @@ import re
 from gptme.logmanager import get_conversations, Log
 import warnings
 
+from gptme.tools import init_tools
+from gptme.tools.base import ToolUse
+
 @dataclass
 class PlanActionOutcome:
     conversation_id: str
     timestamp: datetime
     planning: str
-    action: str
+    action: ToolUse
     outcome: str | None
     score: float | None
     message_index: int
@@ -20,28 +23,31 @@ class PlanActionOutcome:
 
     def to_searchable_text(self) -> str:
         """Convert planning/action/outcome to searchable text format"""
-        # only show the first 2 lines of the action
-        action_lines = self.action.split("\n")
-        action_text = "\n".join(action_lines[:2])
-        if len(action_lines) > 2:
-            action_text += "\n..."
-        text = f"# Planning\n{self.planning}\n# Action\n```{action_text}\n```"
-        if self.outcome:
-            text += f"\n# Outcome\n{self.outcome}\n# Score: {self.score}"
+        text = f"# Planning\n{self.planning}"
         return text
     
-    def to_action_outcome_text(self) -> str:
+    def to_action_outcome_text(self, format: str = "markdown") -> str:
         """Convert planning/action/outcome to concise text format"""
-        action_lines = self.action.split("\n")
-        action_text = "\n".join(action_lines[:2])
-        return f"Action:\n```{action_text}\n```\nOutcome:\n{self.outcome} (score: {self.score})"
+        action_lines = self.action.content.split("\n")
+        action_line = action_lines[0]
+        if len(action_lines) > 1:
+            action_line += "\n..."
+        tool = self.action.tool
+        args = self.action.args
+        action_formatted = ""
+        if format == "markdown":
+            action_formatted = f"Action:\n```{tool}{' ' + ' '.join(args) if args else ''}\n{action_line}\n```"
+        elif format == "xml":
+            action_formatted = f"<tool-use>\n<{tool}{f" args='{' '.join(args)}'" if args else ''}>\n{action_line}\n</{tool}>\n</tool-use>"
+        return f"{action_formatted}\nOutcome:\n{self.outcome} (score: {self.score})"
 
 class ThoughtSearcher:
-    def __init__(self):
+    def __init__(self, tool_format = "markdown"):
         self.index_name = "thought_search"
         self._plan_actions: List[PlanActionOutcome] | None = None
         self._encoded = False
         self.load_model()
+        self.tool_format = tool_format
 
     def load_model(self):
         warnings.filterwarnings('ignore')
@@ -97,7 +103,7 @@ class ThoughtSearcher:
     def plan_actions(self) -> List[PlanActionOutcome]:
         """Lazy load and cache planning/action/outcome triplets"""
         if self._plan_actions is None:
-            self._plan_actions = get_plan_action_outcome_triples()
+            self._plan_actions = get_plan_action_outcome_triples(tool_format=self.tool_format)
         return self._plan_actions
 
     def encode_thoughts(self):
@@ -133,19 +139,15 @@ class ThoughtSearcher:
             matches.append((self.plan_actions[idx], score))
         return sorted(matches, key=lambda x: x[1], reverse=True)
 
-def extract_plan_action(content: str) -> tuple[str, str] | None:
+def extract_plan_action(content: str) -> tuple[str, ToolUse] | None:
     """Extract planning and action content from a message."""
     planning_match = re.search(r'<planning>(.*?)</planning>', content, re.DOTALL)
-    if not planning_match:
-        return None
-        
-    action_match = re.search(r'```(.*?)```', content[planning_match.end():], re.DOTALL)
-    if not action_match:
-        return None
-        
+    if not planning_match: return None
+    action_match = next(ToolUse.iter_from_content(content), None)
+    if not action_match: return None
     return (
         planning_match.group(1).strip(),
-        action_match.group(1).strip()
+        action_match,
     )
 
 def extract_outcome(content: str) -> tuple[str, float] | None:
@@ -179,8 +181,9 @@ def extract_outcome(content: str) -> tuple[str, float] | None:
         
     return (outcome_text, score)
 
-def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
+def get_plan_actions(tool_format = "markdown") -> Generator[PlanActionOutcome, None, None]:
     """Get all planning+action pairs and their subsequent outcomes from conversations."""
+    init_tools() # otherwise tool use parsing will fail
     for conv in get_conversations():
         log = Log.read_jsonl(conv.path)
         messages = list(log)  # Convert to list to allow looking ahead
@@ -210,8 +213,7 @@ def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
             # Look for planning/action pairs
             if '<planning>' in msg.content:
                 result = extract_plan_action(msg.content)
-                if not result:
-                    continue
+                if not result: continue
                 
                 planning, action = result
                 
@@ -231,32 +233,42 @@ def get_plan_actions() -> Generator[PlanActionOutcome, None, None]:
         if last_plan_action:
             yield last_plan_action
 
-def get_plan_action_outcome_triples(limit: int | None = None) -> list[PlanActionOutcome]:
-    results = list(get_plan_actions())
+def get_plan_action_outcome_triples(limit: int | None = None, tool_format: str = "markdown") -> list[PlanActionOutcome]:
+    init_tools() # otherwise tool use parsing will fail 
+    results = list(get_plan_actions(tool_format))
     results.sort(key=lambda x: x.timestamp)
     if limit: results = results[:limit]
     return results
 
 _searcher: ThoughtSearcher | None = None
 
-def search_memory(query: str, k: int = 3) -> List[tuple[PlanActionOutcome, float]]:
+def search_memory(query: str, k: int = 5, tool_format = "markdown") -> List[tuple[PlanActionOutcome, float]]:
+    global _searcher
     if _searcher is None:
-        _searcher = ThoughtSearcher()
+        _searcher = ThoughtSearcher(tool_format=tool_format)
         _searcher.create_index()
     return _searcher.search(query, k)
 
 if __name__ == "__main__":
+    init_tools()
+    xs = search_memory(f"""Planning:
+1. I should use the `search` tool to find relevant parts of the codebase that handle command execution and monitoring.
+2. I'll start by searching for functions or classes related to command execution.""", k=1, tool_format="xml")[0][0]
+    print(xs.to_action_outcome_text(format="xml"))
+    # xs = get_plan_action_outcome_triples()
+    # print("\n\n".join([x.to_searchable_text() for x in xs]))
+    # # for (x) in xs:
+    # #     print(x.to_searchable_text())
+    
+    # mentions_search = [x for x in xs if "search" in x.planning]
+    # for x in mentions_search:
+    #     print(x.to_searchable_text())
+    # # print("Search 1")
+    # for x in xs:
 
-    # searcher = ThoughtSearcher()
-    # searcher.create_index()
-    # xs = searcher.search("Use the search tool")
-    xs = get_plan_action_outcome_triples()
-
-    print("Search 1")
-    for x in xs:
-        print(x.to_action_outcome_text())
-        print('---')
-        print()
+    #     print(x.to_action_outcome_text())
+    #     print('---')
+    #     print()
     # searcher = ThoughtSearcher()
     # xs = searcher.search("success", 1)
     # for x, score in xs:
@@ -278,3 +290,9 @@ if __name__ == "__main__":
     #     print("OUTCOME:", x.outcome)
     #     print("SCORE:", score)
     #     print("---")    
+
+#     test_msg = """
+# Thank you for the follow-up. After careful consideration, I can confirm that the current explanation and questions are indeed relevant to issue 348. They accurately reflect the core requirements and the key aspects we need to investigate to implement the requested feature.\n\n<outcome><score>0.9</score>The refinement of the content was a good decision, making it more focused and relevant to the specific issue. In the future, I could be even more precise in linking the understanding to the exact wording of the issue.</outcome>\n\nNow, let's proceed with investigating the codebase to answer our questions.\n\n<planning>\n1. Use the `search` tool to find where shell commands are executed in the codebase.\n2. Examine the search results and use the `read` tool to investigate the relevant parts of the code.\n</planning>\n\n```ipython\nsearch('shell command execute')\n```
+# """
+#     print(re.search(r'```(.*?)```', test_msg, re.DOTALL))
+#     print(extract_plan_action(test_msg))

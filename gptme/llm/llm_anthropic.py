@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    List,
     Literal,
     TypedDict,
     cast,
@@ -94,6 +95,7 @@ def _stream_with_retry(
     system_messages: list,
     tools_dict: list | None,
     model: str,
+    stop: List[str] | None = None
 ) -> Generator[str, None, None]:
     """Helper function to handle the streaming with retry logic"""
     from anthropic import NOT_GIVEN  # fmt: skip
@@ -110,7 +112,7 @@ def _stream_with_retry(
         top_p=TOP_P,
         max_tokens=4096,
         tools=tools_dict if tools_dict else NOT_GIVEN,
-        stop_sequences=["</planning>"],
+        stop_sequences=stop,
     ) as stream:
         for chunk in stream:
             if hasattr(chunk, "stop_reason"):
@@ -165,7 +167,7 @@ def _stream_with_retry(
     before_sleep=before_sleep_log(logger, logging.WARNING)
 )
 def stream(
-    messages: list[Message], model: str, tools: list[ToolSpec] | None
+    messages: list[Message], model: str, tools: list[ToolSpec] | None, stop: List[str] | None = None
 ) -> Generator[str, None, None]:
     import anthropic.types  # fmt: skip
     import anthropic.types.beta.prompt_caching  # fmt: skip
@@ -174,7 +176,7 @@ def stream(
         messages, tools
     )
 
-    yield from _stream_with_retry(messages_dicts, system_messages, tools_dict, model)
+    yield from _stream_with_retry(messages_dicts, system_messages, tools_dict, model, stop)
 
 
 def _handle_files(message_dicts: list[dict]) -> list[dict]:

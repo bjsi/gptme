@@ -345,6 +345,7 @@ class ToolUse:
     @classmethod
     def iter_from_content(cls, content: str) -> Generator["ToolUse", None, None]:
         """Returns all ToolUse in a message, markdown or XML, in order."""
+
         # collect all tool uses
         tool_uses = []
         if tool_format == "xml" or not exclusive_mode:

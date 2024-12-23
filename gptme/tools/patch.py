@@ -269,7 +269,9 @@ def execute_patch(
         with open(args[0], "w") as f: f.write(updated_code)
         yield from commit_patch(args[0])
         return
-    code_lines = open(args[0]).read().splitlines()
+
+    with open(args[0], 'r') as f:
+        code_lines = f.read().splitlines()
     region = eval(args[1])
     if region[0] == -1:
         region = (len(code_lines), len(code_lines))

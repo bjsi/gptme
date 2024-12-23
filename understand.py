@@ -5,6 +5,7 @@ import subprocess
 import sys
 import os
 
+from gptme.tools.base import ToolUse
 from gptme.tools.file_ctx import FileContext
 
 def main():
@@ -18,7 +19,6 @@ def main():
     os.environ["ISSUE"] = issue
     os.environ["ALLOW_EDIT"] = "understanding.md"
     os.environ["POST_PATCH_MSG"] = f"Are you sure your explanation and questions are relevant to issue {issue}?"
-    # os.environ["REQUEST_TO_PATCH"] = "1"
 
     init_understanding_md = """# Current Understanding
 
@@ -31,6 +31,8 @@ def main():
 
     understanding_file_ctx = FileContext("understanding.md")
     understanding_file_ctx.show(line_range=(1, -1))
+
+    tool_format = "xml"
 
     # User prompt
     user_prompt = f"""You are a code understanding tool.
@@ -46,48 +48,15 @@ You will think step by step when solving a problem to plan your next action in `
 After you receive feedback on the result of your action, reflect on the result in `<outcome>` tags.
 The `<outcome>` should include a score between -1 and 1 and a one sentence reflection on whether the action was the best choice in this context and what you would do differently next time."""
     
-    if os.environ.get("REQUEST_TO_PATCH"):
-        assistant_msg1 = f"""Certainly! Let's get started.
-
-<planning>
-1. I should start by creating the `understanding.md` file and adding the initial headings.
-2. Let's begin by requesting permission to create the `understanding.md` file.
-</planning>
-
-```ipython
-request_to_patch('understanding.md', region=(1, 1), patch_description='Initialise the understanding.md file')
-```"""
-        
-        assistant_msg2 = f"""Thanks for approving the patch!
-
-<outcome>The `request_to_patch` tool was a good choice because it allowed me to create the `understanding.md` file.</outcome>
-
-<planning>
-1. Next we should add the initial headings to the `understanding.md` file.
-</planning>
-
-```patch understanding.md (1, 1)
-{init_understanding_md}
-```"""
-        # Create initial messages list
-        init_messages = [
-            {"role": "user", "content": user_prompt},
-            {"role": "assistant", "content": assistant_msg1},
-            {"role": "system", "content": "Approved."},
-            {"role": "assistant", "content": assistant_msg2},
-            {"role": "system", "content": f"Patch applied:\n{understanding_file_ctx.stringify()}"},
-        ]
-    else:
-        assistant_msg1 = f"""Certainly! Let's get started.
+    assistant_msg1 = f"""Certainly! Let's get started.
 
 <planning>
 1. I should start by creating the `understanding.md` file and adding the headings.
 </planning>
 
-```patch understanding.md (1, 1)
-{init_understanding_md}
-```"""
-        assistant_msg2 = f"""<outcome><score>1.0</score>My use of the `patch` tool was correct. Based on the contents of the file the patch was applied successfully.</outcome>
+{ToolUse("patch", ["understanding.md", "(1, 1)"], init_understanding_md).to_output(tool_format)}
+"""
+    assistant_msg2 = f"""<outcome><score>1.0</score>My use of the `patch` tool was correct. Based on the contents of the file the patch was applied successfully.</outcome>
 
 That looks correct! Now I'll start gathering context.
 
@@ -96,24 +65,26 @@ That looks correct! Now I'll start gathering context.
 2. Then I should use the `search` and `read` tools to search for relevant parts of the codebase.
 </planning>
 
-```shell
-gh issue view {issue}
-```"""
-        
-        res = subprocess.run(["gh", "issue", "view", issue], capture_output=True, text=True).stdout
-        init_messages = [
-            {"role": "user", "content": user_prompt},
-            {"role": "assistant", "content": assistant_msg1},
-            {"role": "system", "content": f"Patch applied:\n{understanding_file_ctx.stringify()}"},
-            {"role": "assistant", "content": assistant_msg2},
-            {"role": "system", "content": f"```stdout\n{res}\n```"},
-        ]
+{ToolUse("shell", [], f"gh issue view {issue}").to_output(tool_format)}
+"""
+    
+    res = subprocess.run(["gh", "issue", "view", issue], capture_output=True, text=True).stdout
+    init_messages = [
+        {"role": "user", "content": user_prompt},
+        {"role": "assistant", "content": assistant_msg1},
+        {"role": "system", "content": f"Patch applied:\n{understanding_file_ctx.stringify()}"},
+        {"role": "assistant", "content": assistant_msg2},
+        {"role": "system", "content": f"```stdout\n{res}\n```"},
+    ]
+
+    model = "openrouter/qwen/qwen-2.5-coder-32b-instruct"
 
     # Run gptme command
     subprocess.run([
         "gptme", 
-        # "-n",
+        "--model", model,
         "--tools", "gh,search,read,ipython,patch",
+        "--tool-format", tool_format,
         "--init-messages", json.dumps(init_messages),
     ])
 

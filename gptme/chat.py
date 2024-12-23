@@ -74,7 +74,7 @@ def chat(
         stream = False
 
     console.log(f"Using logdir {path_with_tilde(logdir)}")
-    manager = LogManager.load(logdir, initial_msgs=initial_msgs, create=True)
+    manager = LogManager.load(logdir, initial_msgs=initial_msgs, create=True, tool_format=tool_format)
 
     # change to workspace directory
     # use if exists, create if @log, or use given path

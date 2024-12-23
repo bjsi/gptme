@@ -4,7 +4,7 @@ import sys
 import time
 from collections.abc import Iterator
 from functools import lru_cache
-from typing import cast
+from typing import List, cast
 
 from rich import print
 
@@ -74,15 +74,24 @@ def _chat_complete(
     else:
         raise ValueError("LLM not initialized")
 
+_stop = ["</planning>"]
+
+def set_stop(stop: List[str] | None = None):
+    global _stop
+    _stop = stop
+
+def get_stop() -> List[str] | None:
+    global _stop
+    return _stop
 
 def _stream(
     messages: list[Message], model: str, tools: list[ToolSpec] | None
 ) -> Iterator[str]:
     provider = _client_to_provider()
     if provider in PROVIDERS_OPENAI:
-        return stream_openai(messages, model, tools)
+        return stream_openai(messages, model, tools, _stop)
     elif provider == "anthropic":
-        return stream_anthropic(messages, model, tools)
+        return stream_anthropic(messages, model, tools, _stop)
     else:
         raise ValueError("LLM not initialized")
 

@@ -16,7 +16,8 @@ class FileContext:
     """Tree of context for a single source code file. Show nodes using the `show` method."""
     def __init__(self, file: str):
         self.file = file
-        self.code = open(file, 'r').read()
+        with open(file, 'r') as f:
+            self.code = f.read()
         self.lines = self.code.splitlines()
         self.tree = Parser(PY_LANGUAGE).parse(bytes(self.code, "utf8"))
         self.root_node = self.tree.root_node

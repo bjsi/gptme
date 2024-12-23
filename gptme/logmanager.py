@@ -2,6 +2,7 @@ import fcntl
 import json
 import logging
 import os
+import re
 import shutil
 import textwrap
 from collections.abc import Generator
@@ -18,6 +19,8 @@ from typing import (
 )
 
 from rich import print
+
+from gptme.llm import get_stop, set_stop
 
 from .dirs import get_logs_dir
 from .message import Message, len_tokens, print_msg
@@ -81,7 +84,9 @@ class LogManager:
         logdir: PathLike | None = None,
         branch: str | None = None,
         lock: bool = True,
+        tool_format = "markdown",
     ):
+        self.tool_format = tool_format
         self.current_branch = branch or "main"
         if logdir:
             self.logdir = Path(logdir)
@@ -163,6 +168,31 @@ class LogManager:
         self.write()
         if not msg.quiet:
             print_msg(msg, oneline=False)
+        if len(msg.get_codeblocks()) > 0:
+            set_stop("</planning>")
+
+    def post_append_hook(self, msg: Message) -> None:
+        """Inserts memories into the log."""
+        from gptme.memory import search_memory
+        set_stop(None)
+        planning_match = re.search(r'<planning>(.*?)</planning>', msg.content, re.DOTALL)
+        if not planning_match: return
+        query = f"Planning:\n{planning_match.group(1)}"
+        print("searching for memories...")
+        print(query)
+        results = search_memory(query, k=2, tool_format=self.tool_format)
+        print(f"found {len(results)} memories")
+        memories = ""
+        if results:
+            memories += "# Actions on similar tasks:\n"
+            memories += "\n---\n".join([r.to_action_outcome_text() for (r, _) in results])
+        memories = memories.strip()
+        if not memories: memories = "Great, please continue."
+        else: memories = "Revise your plan based on previous actions:\n\n" + memories
+        memory_msg = Message(role="user", content=memories)
+        self.log = self.log.append(memory_msg)
+        self.write()
+        print_msg(memory_msg, oneline=False)
 
     def write(self, branches=True) -> None:
         """

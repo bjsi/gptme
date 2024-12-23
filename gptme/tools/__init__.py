@@ -84,7 +84,6 @@ def init_tools(allowlist: frozenset[str] | None = None) -> None:
         sorted(ToolSpec.get_tools().values(), key=lambda tool: tool.name != "python")
     )
     loaded_tool_names = [tool.name for tool in loaded_tools]
-    print(f"loaded_tool_names: {loaded_tool_names}")
     for tool in tools:
         if tool.name in loaded_tool_names:
             continue

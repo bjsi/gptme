@@ -2,7 +2,7 @@ import base64
 import logging
 from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, List, cast
 
 from ..config import Config
 from ..constants import TEMPERATURE, TOP_P
@@ -139,7 +139,7 @@ def chat(messages: list[Message], model: str, tools: list[ToolSpec] | None) -> s
 
 
 def stream(
-    messages: list[Message], model: str, tools: list[ToolSpec] | None
+    messages: list[Message], model: str, tools: list[ToolSpec] | None, stop: List[str] | None = None
 ) -> Generator[str, None, None]:
     assert openai, "LLM not initialized"
     stop_reason = None
@@ -162,6 +162,7 @@ def stream(
         top_p=TOP_P if not is_o1 else NOT_GIVEN,
         stream=True,
         tools=tools_dict if tools_dict else NOT_GIVEN,
+        stop=stop,
         # the llama-cpp-python server needs this explicitly set, otherwise unreliable results
         # TODO: make this better
         # max_tokens=(
@@ -190,6 +191,8 @@ def stream(
 
         if delta.content is not None:
             yield delta.content
+        if choice.finish_reason == "stop":
+            yield "</planning>"
 
         # Handle tool calls
         if delta.tool_calls:

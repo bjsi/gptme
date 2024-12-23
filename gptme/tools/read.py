@@ -9,7 +9,9 @@ instructions = "Read the content of the given file. The `read` tool takes option
 
 def read(fp: str, line_range: Optional[list[int]] = None, query: Optional[str] = None, names: Optional[list[str]] = None):
    file_ext = os.path.splitext(fp)[1]
-   if file_ext != ".py": return open(fp, "r").read() # just cat non-python files
+   if file_ext != ".py":
+      with open(fp, "r") as f:
+          return f.read() # just cat non-python files
    ctx = FileContext(fp)
    ctx = ctx.show_skeleton() # always include skeleton
    if not line_range and not query and not names: ctx.show_skeleton()
