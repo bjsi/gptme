@@ -21,6 +21,7 @@ from typing import (
 from rich import print
 
 from gptme.llm import get_stop, set_stop
+from gptme.tools.base import ToolUse
 
 from .dirs import get_logs_dir
 from .message import Message, len_tokens, print_msg
@@ -168,15 +169,25 @@ class LogManager:
         self.write()
         if not msg.quiet:
             print_msg(msg, oneline=False)
-        if len(msg.get_codeblocks()) > 0:
-            set_stop("</planning>")
+        if err_msg := self.incorrect_reasoning_format(self.log[-1], self.log[-2] if len(self.log) > 1 else None):
+            self.log.append(err_msg)
+            self.write()
+            print_msg(err_msg, oneline=False)
+        if get_stop(): self.post_append_hook(msg)
+
+    def incorrect_reasoning_format(self, msg: Message, prev_msg: Message | None = None) -> Message | None:
+        """Validates the reasoning state machine format"""
+        if msg.role != "assistant": return None
+        if "<planning>" not in msg.content: return Message(role="system", content="Your message is missing <planning>.")
+        if prev_msg and list(ToolUse.iter_from_content(prev_msg.content)) and "<outcome>" not in msg.content: return Message(role="system", content="You must reflect on the <outcome> of your action.")
+        return None
 
     def post_append_hook(self, msg: Message) -> None:
         """Inserts memories into the log."""
         from gptme.memory import search_memory
-        set_stop(None)
         planning_match = re.search(r'<planning>(.*?)</planning>', msg.content, re.DOTALL)
         if not planning_match: return
+        set_stop(None)
         query = f"Planning:\n{planning_match.group(1)}"
         print("searching for memories...")
         print(query)
@@ -184,11 +195,11 @@ class LogManager:
         print(f"found {len(results)} memories")
         memories = ""
         if results:
-            memories += "# Actions on similar tasks:\n"
-            memories += "\n---\n".join([r.to_action_outcome_text() for (r, _) in results])
+            memories += "# Memories from similar tasks:\n"
+            memories += "\n---\n".join([r.to_action_outcome_text(format=self.tool_format, redact=True) for (r, _) in results])
         memories = memories.strip()
         if not memories: memories = "Great, please continue."
-        else: memories = "Revise your plan based on previous actions:\n\n" + memories
+        else: memories += "\n\n1. Revise your <planning> based on your memories of similar tasks if they are relevant. 2. Choose your next action."
         memory_msg = Message(role="user", content=memories)
         self.log = self.log.append(memory_msg)
         self.write()

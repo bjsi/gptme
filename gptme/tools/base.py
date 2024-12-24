@@ -20,9 +20,9 @@ from typing import (
 import json_repair
 from lxml import etree
 
-from ..codeblock import Codeblock
-from ..message import Message
-from ..util import clean_example, transform_examples_to_chat_directives
+from gptme.codeblock import Codeblock
+from gptme.message import Message
+from gptme.util import clean_example, transform_examples_to_chat_directives
 
 logger = logging.getLogger(__name__)
 
@@ -291,6 +291,8 @@ class ToolUse:
                     self.kwargs,
                     confirm,
                 )
+                from gptme.llm import set_stop
+                set_stop(["</planning>"])
                 if isinstance(ex, Generator):
                     yield from ex
                 else:
@@ -327,7 +329,7 @@ class ToolUse:
         if tool := get_tool_for_langtag(codeblock.lang):
             # NOTE: special case
             args = (
-                tool.parse_args(codeblock.lang)
+                tool.parse_args(codeblock.lang.replace(tool.name, "").strip())
                 if tool.parse_args
                 else codeblock.lang.split(" ")[1:]
                 if tool.name != "save"
@@ -409,11 +411,13 @@ class ToolUse:
             # Parse the content as HTML to be more lenient with malformed XML
             parser = etree.HTMLParser()
             tree = etree.fromstring(content, parser)
+            from gptme.tools import get_tool_for_langtag
 
             for tooluse in tree.xpath("//tool-use"):
                 for child in tooluse.getchildren():
                     tool_name = child.tag
-                    args = list(child.attrib.values())
+                    tool = get_tool_for_langtag(tool_name)
+                    args = tool.parse_args(child.attrib.values()[0]) if tool.parse_args else child.attrib.values()
                     tool_content = (child.text or "").strip()
 
                     # Find the start position of the tool in the original content
@@ -512,3 +516,17 @@ def load_from_file(path: Path) -> list[ToolSpec]:
     tools_new = tools_after - tools_before
     print(f"Loaded tools {tools_new} from {path}")
     return [tool for tool_name in tools_new if (tool := ToolSpec.get_tool(tool_name))]
+
+if __name__ == "__main__":
+    from gptme.tools import init_tools
+    init_tools()
+    for tool_use in ToolUse.iter_from_content("""
+<tool-use>
+<patch args='understanding.md (3, 3)'>
+- The `execute_shell_impl` function in `gptme/tools/shell.py` handles the execution of shell commands.
+- It uses a `ShellSession` object to run the command and captures the output, standard error, and return code.
+- The function formats the output and yields a `Message` object containing the results of the command execution.
+</patch>
+</tool-use>
+""".strip()):
+        print(tool_use)

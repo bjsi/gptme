@@ -5,7 +5,7 @@ from gptme.tools.base import ToolSpec, ToolUse
 from gptme.tools.file_ctx import FileContext
 
 
-instructions = "Read the content of the given file. The `read` tool takes optional `line_range` or `names` arguments to expand the context of the file."
+instructions = "Read the content in the given file."
 
 def read(fp: str, line_range: Optional[list[int]] = None, query: Optional[str] = None, names: Optional[list[str]] = None):
    file_ext = os.path.splitext(fp)[1]
@@ -24,7 +24,7 @@ def read(fp: str, line_range: Optional[list[int]] = None, query: Optional[str] =
 def examples(tool_format):
     return f"""
 > User: read file.py
-> Assistant: Certainly! Here is the content of file.py:
+> Assistant:
 {ToolUse("ipython", [], "read('file.py')").to_output(tool_format)}
 
 > User: read file.py, focusing on the "run" and "save" methods.

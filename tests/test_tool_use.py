@@ -153,17 +153,19 @@ def test_toolcall_regex_invalid(content):
 
 def test_xml():
     content = """
+<outcome><score>1.0</score>Reading the `execute_shell_impl` function provided a clear understanding of how shell 
+commands are executed in the codebase.</outcome>
+
+<planning>
+1. I should update the `understanding.md` file with the current understanding of the code.
+2. I should add questions to investigate based on the issue description.
+</planning>
+
 <tool-use>
 <patch args='understanding.md (3, 3)'>
-- The `execute_shell` function in `gptme/tools/shell.py` is the main entry point for executing shell commands.
-- It uses `get_shell_command` to construct the command string.
-- The `execute_shell_impl` function is responsible for running the shell command and formatting the output.
-- The `ShellSession` class in `gptme/tools/shell.py` contains the `run` method which actually executes the shell command.
-
-# Questions to Investigate
-- How does the `ShellSession.run` method handle long-running commands?
-- Is there a mechanism in place to monitor the execution time of shell commands?
-- How can we add a feature to monitor and optionally interrupt long-running commands?
+- The `execute_shell_impl` function in `gptme/tools/shell.py` handles the execution of shell commands.
+- It uses a `ShellSession` object to run the command and captures the output, standard error, and return code.
+- The function formats the output and yields a `Message` object containing the results of the command execution.
 </patch>
 </tool-use>
 """
@@ -173,13 +175,7 @@ def test_xml():
     assert tool_use.tool == "patch"
     assert tool_use.args == ["understanding.md (3, 3)"]
     assert tool_use.content == """
-- The `execute_shell` function in `gptme/tools/shell.py` is the main entry point for executing shell commands.
-- It uses `get_shell_command` to construct the command string.
-- The `execute_shell_impl` function is responsible for running the shell command and formatting the output.
-- The `ShellSession` class in `gptme/tools/shell.py` contains the `run` method which actually executes the shell command.
-
-# Questions to Investigate
-- How does the `ShellSession.run` method handle long-running commands?
-- Is there a mechanism in place to monitor the execution time of shell commands?
-- How can we add a feature to monitor and optionally interrupt long-running commands?
+- The `execute_shell_impl` function in `gptme/tools/shell.py` handles the execution of shell commands.
+- It uses a `ShellSession` object to run the command and captures the output, standard error, and return code.
+- The function formats the output and yields a `Message` object containing the results of the command execution.
 """.strip()

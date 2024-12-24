@@ -79,6 +79,7 @@ _stop = ["</planning>"]
 def set_stop(stop: List[str] | None = None):
     global _stop
     _stop = stop
+    print(f"set stop to {_stop}")
 
 def get_stop() -> List[str] | None:
     global _stop

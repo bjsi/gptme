@@ -5,22 +5,22 @@ from pathlib import Path
 
 from gptme.tools.file_ctx import FileContext
 
-instructions = "Use this tool to search the contents of files in the codebase. This is useful for finding the definition of a class, function, or variable."
+instructions = "Use this tool to search the contents of files in the codebase."
 
 
 def examples(tool_format):
     return f"""
-> User: search for occurrences of the `run` function in the current directory
+> User: find the `run` function.
 > Assistant:
-{ToolUse("ipython", [], "search('def run')").to_output(tool_format)}
+{ToolUse("ipython", [], "search(query='def run')").to_output(tool_format)}
 
-> User: search for occurrences of the `run` or `save` functions in the test directory
+> User: find the `run` or `save` functions.
 > Assistant:
-{ToolUse("ipython", [], "search('run|save', 'test')").to_output(tool_format)}
+{ToolUse("ipython", [], "search(query='def run|def save')").to_output(tool_format)}
 
-> User: search for the definition of the `Mail` class
+> User: find the `Mail` class
 > Assistant:
-{ToolUse("ipython", [], "search('class Mail')").to_output(tool_format)}
+{ToolUse("ipython", [], "search(query='class Mail')").to_output(tool_format)}
 """.strip()
 
 def search_basic(query: str, directory: str = "."):
@@ -64,20 +64,25 @@ def search_file_names(query: str, directory: str = "."):
     )
     p1.stdout.close()
     output = p2.communicate()[0]
+    p1.wait()  # Wait for p1 to finish
     return output.strip()
 
+def preprocess_query(query: str) -> str:
+    return query.replace(".", "|") # support class.method queries
+
 def search(query: str):
+    query = preprocess_query(query)
     file_contents = subprocess.run(
         ["rga", "--line-number", "--no-heading", "-e", query, '.'],
         capture_output=True,
         text=True
-    )
+    ).stdout.strip()
     file_names = search_file_names(query, '.')
     file_name_results = f"File name matches:\n{file_names}\n" + '-' * 80 + "\n"
     # if os.path.isfile(file_or_dir):
     #     # If directory is a single file, prepend filename to each line
     #     file_contents.stdout = "\n".join(f"{file_or_dir}:{line}" for line in file_contents.stdout.splitlines())
-    parsed = parse_search_results(file_contents.stdout)
+    parsed = parse_search_results(file_contents)
     output = ""
     num_results = len(parsed.keys())
     if num_results > 40: return f"Found >{num_results} results. Please use a more specific search query."
@@ -94,3 +99,6 @@ tool = ToolSpec(
     examples=examples,
     functions=[search],
 )
+
+if __name__ == "__main__":
+    print(search("def run"))

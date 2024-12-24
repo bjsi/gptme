@@ -36,34 +36,23 @@ patch_content2 = """
 """
 
 def examples(tool_format):
-    output = ""
-    if os.environ.get("REQUEST_TO_PATCH"):
-        output += f"""
-> User: patch the hello function in `src/hello.py` to ask for the name of the user.
-> Assistant: Certainly! I'll request a patch first:
-{ToolUse("ipython", [], "request_to_patch('src/hello.py', region=(11, 13), patch_description='Add a prompt for the user\'s name')").to_output(tool_format)}
-> System: Approved 'Add a prompt for the user's name' within region:
+    output = f"""
+> System:
 ...⋮...
  11│class Hello:
  12│    def hello(self):
  13│        print("Hello World")
 ...⋮...
-Are you sure about your intended change? If not, consider an alternative approach."""
-    else:
-        output += f"""
-> Assistant: Yes, I should update line 13 to include a prompt for the user's name.
+> Assistant: I should update line 13 to include a prompt for the user's name.
 {ToolUse("patch", ['src/hello.py', '(13, 13)'], patch_content2).to_output(tool_format)}
-> System: Patch applied.
 
 > User: Append an if __name__ == "__main__" block at the end of the file.
 > Assistant: Okay!
 {ToolUse("patch", ['src/hello.py', '(-1, -1)'], "if __name__ == '__main__':\n    Hello().hello()").to_output(tool_format)}
-> System: Patch applied.
 
 > User: create a new file `ideas.txt` with a TODO list.
 > Assistant: Certainly! I'll create the file:
 {ToolUse("patch", ['ideas.txt', '(1, 1)'], "TODO: Write a TODO list.").to_output(tool_format)}
-> System: Created new file.
 """.strip()
     return output
 
@@ -128,7 +117,7 @@ def yield_messages(file_path: str | Path, start: int, patch: str, new_errors: Li
         for error in sorted(new_errors):
             yield Message("system", f"  Line {error.line}: {error.message}")
     if os.environ.get("POST_PATCH_MSG"): yield Message("system", os.environ.get("POST_PATCH_MSG"))
-    yield Message("system", "If you notice errors, you can correct them or revert the patch using the `revert_to` tool.")
+    # yield Message("system", "If you notice errors, you can correct them or revert the patch using the `revert_to` tool.")
 
 def patch(file_path: str | Path, region: tuple[int, int], patch: str) -> Generator[Message, None, None]:
     global _requested
@@ -269,7 +258,7 @@ def execute_patch(
         with open(args[0], "w") as f: f.write(updated_code)
         yield from commit_patch(args[0])
         return
-
+    
     with open(args[0], 'r') as f:
         code_lines = f.read().splitlines()
     region = eval(args[1])
@@ -301,10 +290,10 @@ tool = ToolSpec(
     desc="Apply a patch to a file",
     instructions=instructions,
     examples=examples,
-    functions=functions,
+    # functions=functions,
     execute=execute_patch,
     block_types=["patch"],
-    parse_args=lambda s: [s.split()[1], " ".join(s.split()[2:])],
+    parse_args=lambda s: [s.split()[0], " ".join(s.split()[1:])],
     parameters=[
         Parameter(
             name="path",

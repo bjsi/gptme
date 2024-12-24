@@ -166,11 +166,6 @@ def main(
     workspace: str | None,
     init_messages: str | None,
 ):
-    tool_allowlist = ['read',
-                      'search',
-                      "patch",
-                      "shell",
-                      "ipython",]
     show_hidden = True
     print(f"init_messages: {init_messages}")
     """Main entrypoint for the CLI."""
