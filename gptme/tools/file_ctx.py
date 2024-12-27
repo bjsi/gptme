@@ -14,10 +14,12 @@ class EmptyNode:
 
 class FileContext:
     """Tree of context for a single source code file. Show nodes using the `show` method."""
-    def __init__(self, file: str):
+    def __init__(self, file: str | None = None, content: str | None = None):
         self.file = file
-        with open(file, 'r') as f:
-            self.code = f.read()
+        if file:
+            with open(file, 'r') as f:
+                self.code = f.read()
+        else: self.code = content
         self.lines = self.code.splitlines()
         self.tree = Parser(PY_LANGUAGE).parse(bytes(self.code, "utf8"))
         self.root_node = self.tree.root_node

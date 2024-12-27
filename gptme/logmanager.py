@@ -37,8 +37,41 @@ RoleLiteral = Literal["user", "assistant", "system"]
 
 
 @dataclass(frozen=True)
+class SWEBenchInfo:
+    instance_id: str
+    model_name: str
+    target: bool  # Changed from int to bool to match dataset format
+    exit_status: str | None = None
+    generated_patch: str | None = None
+    eval_logs: str | None = None
+    timestamp: datetime = field(default_factory=datetime.now)
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary format matching SWE-bench dataset."""
+        return {
+            "instance_id": self.instance_id,
+            "model_name": self.model_name,
+            "target": self.target,
+            "exit_status": self.exit_status,
+            "generated_patch": self.generated_patch,
+            "eval_logs": self.eval_logs,
+            "timestamp": self.timestamp.isoformat()
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "SWEBenchInfo":
+        """Create from dictionary, handling optional fields."""
+        # Convert timestamp string to datetime if present
+        if "timestamp" in d:
+            d = d.copy()  # Make a copy to avoid modifying input
+            d["timestamp"] = datetime.fromisoformat(d["timestamp"])
+        return cls(**d)
+
+
+@dataclass(frozen=True)
 class Log:
     messages: list[Message] = field(default_factory=list)
+    swe_bench_info: SWEBenchInfo | None = None
 
     def __getitem__(self, key):
         return self.messages[key]
@@ -60,18 +93,46 @@ class Log:
 
     @classmethod
     def read_jsonl(cls, path: PathLike, limit=None) -> "Log":
+        """Read messages from JSONL and SWE-bench info from separate JSON file."""
         gen = _gen_read_jsonl(path)
         if limit:
             gen = islice(gen, limit)  # type: ignore
-        return Log(list(gen))
+        
+        # Try to load SWE-bench info if it exists
+        swe_bench_info = None
+        swe_bench_info_file = Path(path).parent / "swe_bench_info.json"
+        if swe_bench_info_file.exists():
+            with swe_bench_info_file.open() as f:
+                swe_bench_info = SWEBenchInfo.from_dict(json.load(f))
+        
+        return Log(messages=list(gen), swe_bench_info=swe_bench_info)
 
     def write_jsonl(self, path: PathLike) -> None:
+        """Write messages to JSONL and SWE-bench info to separate JSON file."""
         with open(path, "w") as file:
             for msg in self.messages:
                 file.write(json.dumps(msg.to_dict()) + "\n")
+        if self.swe_bench_info:
+            swe_bench_info_file = Path(path).parent / "swe_bench_info.json"
+            swe_bench_info_file.parent.mkdir(parents=True, exist_ok=True)
+            json.dump(self.swe_bench_info.to_dict(), swe_bench_info_file.open("w"), indent=2)
 
     def print(self, show_hidden: bool = False):
         print_msg(self.messages, oneline=False, show_hidden=show_hidden)
+
+    def to_dict(self) -> dict:
+        d = {
+            "messages": [msg.to_dict() for msg in self.messages],
+        }
+        if self.swe_bench_info:
+            d["swe_bench_info"] = {
+                "instance_id": self.swe_bench_info.instance_id,
+                "model_name": self.swe_bench_info.model_name,
+                "target": self.swe_bench_info.target,
+                "trajectory": self.swe_bench_info.trajectory,
+                "timestamp": self.swe_bench_info.timestamp.isoformat(),
+            }
+        return d
 
 
 class LogManager:
@@ -277,6 +338,7 @@ class LogManager:
         branch: str = "main",
         create: bool = False,
         lock: bool = True,
+        swe_bench_info: SWEBenchInfo | None = None,
         **kwargs,
     ) -> "LogManager":
         """Loads a conversation log."""
@@ -299,7 +361,7 @@ class LogManager:
             if create:
                 # logger.debug(f"Creating new logfile {logfile}")
                 Path(logfile).parent.mkdir(parents=True, exist_ok=True)
-                Log([]).write_jsonl(logfile)
+                Log(messages=[], swe_bench_info=swe_bench_info).write_jsonl(logfile)
             else:
                 raise FileNotFoundError(f"Could not find logfile {logfile}")
 
@@ -373,19 +435,6 @@ class LogManager:
         shutil.copytree(self.logfile.parent, logsdir / name)
         self.logdir = logsdir / name
         self.write()
-
-    def to_dict(self, branches=False) -> dict:
-        """Returns a dict representation of the log."""
-        d: dict[str, Any] = {
-            "log": [msg.to_dict() for msg in self.log],
-            "logfile": str(self.logfile),
-        }
-        if branches:
-            d["branches"] = {
-                branch: [msg.to_dict() for msg in msgs]
-                for branch, msgs in self._branches.items()
-            }
-        return d
 
 
 def prepare_messages(

@@ -2,8 +2,11 @@ import contextlib
 from datetime import datetime
 from dataclasses import dataclass
 import os
+from pathlib import Path
+import shutil
 from typing import Generator, List
 import re
+from gptme.cli import get_logs_dir
 from gptme.logmanager import get_conversations, Log
 import warnings
 
@@ -73,16 +76,18 @@ class ThoughtSearcher:
                 self.rag = RAGPretrainedModel.from_pretrained("colbert-ir/colbertv2.0", verbose=-1)
         warnings.resetwarnings()
 
-    def index_path(self) -> str:
-        return f".ragatouille/colbert/indexes/{self.index_name}"
+    def index_path(self) -> Path:
+        return get_logs_dir() / ".ragatouille" / "colbert" / "indexes" / self.index_name
 
     def index_exists(self) -> bool:
-        return os.path.exists(self.index_path())
+        return self.index_path().exists()
 
     def create_index(self, if_not_exists: bool = True):
         """Create a persistent index of all planning/action/outcome triplets"""
         if if_not_exists and self.index_exists():
-            self.rag.from_index(self.index_path())
+            p = self.index_path()
+            print(f"loading index from {p}")
+            self.rag.from_index(p)
             return
         
         texts = [pa.to_searchable_text() for pa in self.plan_actions]
@@ -102,7 +107,7 @@ class ThoughtSearcher:
         # Create the index
         warnings.filterwarnings('ignore')
         with contextlib.redirect_stdout(open(os.devnull, 'w')):
-            self.rag.index(
+            index_path = self.rag.index(
                 collection=texts,
                 document_ids=[str(i) for i in range(len(texts))],
                 document_metadatas=metadatas,
@@ -110,6 +115,12 @@ class ThoughtSearcher:
                 max_document_length=512,  # Adjust based on your typical document length
                 split_documents=False  # Keep documents whole since we're already splitting them
             )
+        # Move index to expected location
+        index_path = Path(index_path)
+        if index_path != self.index_path():
+            index_path.parent.mkdir(parents=True, exist_ok=True)
+            if index_path.exists():
+                shutil.move(str(index_path), str(self.index_path()))
         warnings.resetwarnings()
         self._encoded = True
 
@@ -265,6 +276,10 @@ def search_memory(query: str, k: int = 5, tool_format = "markdown") -> List[tupl
 
 if __name__ == "__main__":
     init_tools()
-    xs = get_plan_action_outcome_triples(limit=10)
-    for x in xs:
-        print(x.to_action_outcome_text(redact=True, format="xml"))
+    # xs = get_plan_action_outcome_triples(limit=10)
+    # for x in xs:
+    #     print(x.to_action_outcome_text(redact=True, format="xml"))
+    _searcher = ThoughtSearcher(tool_format="xml")
+    _searcher.create_index()
+    print(_searcher.index_path())
+    #_searcher.create_index()

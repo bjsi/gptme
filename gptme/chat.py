@@ -13,7 +13,7 @@ from .constants import PROMPT_USER
 from .init import init
 from .llm import reply
 from .llm.models import get_model
-from .logmanager import Log, LogManager, prepare_messages
+from .logmanager import Log, LogManager, SWEBenchInfo, prepare_messages
 from .message import Message
 from .prompts import get_workspace_prompt
 from .tools import (
@@ -52,6 +52,7 @@ def chat(
     workspace: Path | None = None,
     tool_allowlist: list[str] | None = None,
     tool_format: ToolFormat = "markdown",
+    swe_bench_info: SWEBenchInfo | None = None,
 ) -> None:
     """
     Run the chat loop.
@@ -74,7 +75,7 @@ def chat(
         stream = False
 
     console.log(f"Using logdir {path_with_tilde(logdir)}")
-    manager = LogManager.load(logdir, initial_msgs=initial_msgs, create=True, tool_format=tool_format)
+    manager = LogManager.load(logdir, initial_msgs=initial_msgs, create=True, tool_format=tool_format, swe_bench_info=swe_bench_info)
 
     # change to workspace directory
     # use if exists, create if @log, or use given path
