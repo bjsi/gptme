@@ -72,6 +72,7 @@ class SWEBenchInfo:
             d["timestamp"] = datetime.fromisoformat(d["timestamp"])
         return cls(**d)
     
+    @classmethod
     def load_from_log_dir(cls, log_dir: PathLike) -> Optional["SWEBenchInfo"]:
         log_dir = Path(log_dir)
         swe_bench_info_file = log_dir / "swe_bench_info.json"

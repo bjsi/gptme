@@ -68,6 +68,7 @@ def append_file_content(
     msg: Message, workspace: Path | None = None, check_modified=False
 ) -> Message:
     """Append attached text files to a message."""
+    return msg
     files = [file_to_display_path(f, workspace).expanduser() for f in msg.files]
     files_text = {}
     for f in files:

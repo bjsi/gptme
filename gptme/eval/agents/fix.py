@@ -8,6 +8,7 @@ from gptme.tools.file_ctx import FileContext
 from swebench.harness.constants import SWEbenchInstance
 
 class Fix:
+    allowed_tools = frozenset(["shell", "search", "read", "ipython", "patch"])
     def act(
           self,
           model: str,

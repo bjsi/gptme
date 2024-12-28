@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 import time
 import uuid
@@ -11,13 +12,14 @@ from gptme.eval.agents.understand import Understand
 from gptme.eval.swe_extra.swe_bench_test_spec import instance_to_trajectory_info, make_test_spec
 from gptme.logmanager import LogManager, SWEBenchInfo 
 from gptme.message import print_msg
-from gptme.tools import execute_msg
+from gptme.tools import execute_msg, init_tools
 from gptme.tools.read import reset_file_read_cache
 from swebench.harness.constants import SWEbenchInstance
 
 logger = logging.getLogger(__name__)
 
 class SWEBenchAgent:
+    stages = ["understand", "reproduce", "fix"]
     def act(
         self,
         model: str,
@@ -25,6 +27,7 @@ class SWEBenchAgent:
         repo_dir: str,
         log_dir: str,
         resume: bool = False,
+        start_stage: str = "understand",
         **kwargs
     ):
         reset_file_read_cache()
@@ -40,35 +43,49 @@ class SWEBenchAgent:
         if not resume:
             init_info.save_to_log_dir(log_dir)
             
-        # Reset repo if resuming
-        if resume:
-            test_spec = make_test_spec(instance)
-            test_spec.reset_repo()
-            
         # Understand
-        files = Understand().act(model=model, instance=instance, repo_dir=repo_dir, log_dir=log_dir, **kwargs.get("understand", {}))
-        init_info.artifacts.update(files)
-        init_info.save_to_log_dir(log_dir)
+        if self.stages.index(start_stage) <= self.stages.index("understand"): 
+            files = Understand().act(model=model, instance=instance, repo_dir=repo_dir, log_dir=log_dir, **kwargs.get("understand", {}))
+            init_info.artifacts.update(files)
+            init_info.save_to_log_dir(log_dir)
             
         # Reproduce
-        files = Reproduce().act(model=model, instance=instance, repo_dir=repo_dir, log_dir=log_dir, context=init_info.artifacts, **kwargs.get("reproduce", {}))
-        init_info.artifacts.update(files)
-        init_info.save_to_log_dir(log_dir)
+        if self.stages.index(start_stage) <= self.stages.index("reproduce"):
+            files = Reproduce().act(model=model, instance=instance, repo_dir=repo_dir, log_dir=log_dir, context=init_info.artifacts, **kwargs.get("reproduce", {}))
+            init_info.artifacts.update(files)
+            init_info.save_to_log_dir(log_dir)
             
         # Fix
-        files = Fix().act(model=model, instance=instance, repo_dir=repo_dir, log_dir=log_dir, **kwargs.get("fix", {}))
-        init_info.artifacts.update(files)
-        init_info.save_to_log_dir(log_dir)
+        if self.stages.index(start_stage) <= self.stages.index("fix"):
+            files = Fix().act(model=model, instance=instance, repo_dir=repo_dir, log_dir=log_dir, **kwargs.get("fix", {}))
+            init_info.artifacts.update(files)
+            init_info.save_to_log_dir(log_dir)
             
         return init_info.artifacts
     
-    def replay(self, log_dir: str):
+    def get_resume_stage(self, log_dir: str) -> str:
         understand_manager = LogManager.load(log_dir, create=True, branch="understand")
         reproduce_manager = LogManager.load(log_dir, create=True, branch="reproduce")
         fix_manager = LogManager.load(log_dir, create=True, branch="fix")
+        if not understand_manager.log.messages:
+            return "understand"
+        elif not reproduce_manager.log.messages:
+            return "reproduce"
+        elif not fix_manager.log.messages:
+            return "fix"
+        return "understand"
+    
+    def replay(self, log_dir: str):
+        logger.info(f"Replaying from log directory: {log_dir}")
+        info = SWEBenchInfo.load_from_log_dir(log_dir)
+        os.chdir(info.repo_dir)
+        init_tools()
+        understand_manager = LogManager.load(log_dir, lock=False, create=True, branch="understand")
+        reproduce_manager = LogManager.load(log_dir, lock=False, create=True, branch="reproduce")
+        fix_manager = LogManager.load(log_dir, lock=False, create=True, branch="fix")
         for msg in understand_manager.log.messages + reproduce_manager.log.messages + fix_manager.log.messages:
             if msg.role == "assistant":
-                for reply_msg in execute_msg(msg, confirm=False):
+                for reply_msg in execute_msg(msg, lambda _: True):
                     print_msg(reply_msg, oneline=False)
 
     def evaluate_instance(
@@ -92,6 +109,7 @@ class SWEBenchAgent:
             log_dir = resume_dir
             logger.info(f"Resuming from log directory: {log_dir}")
             test_spec.reset_repo()
+            self.replay(log_dir)
         else:
             _id = uuid.uuid4().hex[:8]
             name = get_name(f"gptme-evals-{model.replace('/', '--')}-{_id}")
@@ -110,6 +128,7 @@ class SWEBenchAgent:
                 repo_dir=repo_dir, 
                 log_dir=log_dir,
                 resume=bool(resume_dir),
+                start_stage=self.get_resume_stage(log_dir) if resume_dir else "understand",
                 **kwargs
             )
             

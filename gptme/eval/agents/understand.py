@@ -10,6 +10,8 @@ from gptme.tools.read import save_file_read_cache
 from swebench.harness.constants import SWEbenchInstance
 
 class Understand:
+    allowed_tools = frozenset(["shell", "search", "read", "ipython", "patch"])
+
     def act(
         self, 
         model: str, 
@@ -24,7 +26,6 @@ class Understand:
         os.environ["ALLOW_EDIT"] = "understanding.md"
         os.environ["POST_PATCH_MSG"] = f"Are you sure your explanation and questions are relevant to the issue? If you have checked, please continue."
         # Tools
-        allowlist = frozenset(["shell", "search", "read", "ipython", "patch"])
 
         init_understanding_md = """# Current Understanding
 
@@ -79,7 +80,7 @@ That looks correct! Now I'll start gathering context.
             tool_format=tool_format,
             model=model,
             prompt=f"```stdout\n{instance['problem_statement']}\n```",
-            allowlist=allowlist,
+            allowlist=self.allowed_tools,
             initial_msgs=init_messages,
             repo_dir=repo_dir,
             log_dir=log_dir,

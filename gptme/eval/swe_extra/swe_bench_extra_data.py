@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from gptme.logmanager import Log, SWEBenchInfo, get_user_conversations
 from swebench.harness.constants import SWEbenchInstance
 from datasets import Dataset
+import json
+from pathlib import Path
 
 def load_my_trajectories():
     """
@@ -34,7 +36,6 @@ def load_nebius_trajectories():
     dataset = load_dataset("nebius/SWE-agent-trajectories", split="train")
     return dataset.to_pandas()
 
-@cache
 def load_swe_bench_extra_issues():
     dataset = load_dataset("nebius/SWE-bench-extra", split="train")
     return dataset.to_pandas()
@@ -202,10 +203,42 @@ def issues_to_task_instances(issues_df):
     dataset = Dataset.from_pandas(issues_df)
     return [cast(SWEbenchInstance, instance) for instance in dataset]
 
-@cache
+def issue_to_task_instance(issue_df: pd.DataFrame) -> SWEbenchInstance:
+    return cast(SWEbenchInstance, issue_df.iloc[0])
+
+def load_instance_by_id(instance_id: str) -> SWEbenchInstance:
+    issues_df = load_swe_bench_extra_issues()
+    return issue_to_task_instance(issues_df[issues_df['instance_id'] == instance_id])
+
+def get_cache_path():
+    # Store cache in the same directory as this file
+    return Path(__file__).parent / "top_50_cache.json"
+
 def load_top_50_easiest_task_instances():
+    cache_path = get_cache_path()
+    
+    # Try to load from cache first
+    if cache_path.exists():
+        try:
+            with open(cache_path, 'r') as f:
+                cached_data = json.load(f)
+            # Convert the cached data back to a DataFrame
+            cached_df = pd.DataFrame(cached_data)
+            return issues_to_task_instances(cached_df)
+        except Exception as e:
+            print(f"Failed to load cache: {e}")
+    
+    # If cache doesn't exist or failed to load, compute from scratch
     issues_df = load_swe_bench_extra_issues()
     top_50_easiest = filter_top_50_easiest_issues(issues_df)
+    
+    # Save to cache for future use
+    try:
+        with open(cache_path, 'w') as f:
+            json.dump(top_50_easiest.to_dict(orient='records'), f)
+    except Exception as e:
+        print(f"Failed to save cache: {e}")
+    
     return issues_to_task_instances(top_50_easiest)
 
 if __name__ == "__main__":

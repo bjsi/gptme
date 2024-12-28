@@ -11,6 +11,7 @@ from gptme.tools.file_ctx import FileContext
 from swebench.harness.constants import SWEbenchInstance
 
 class Reproduce:
+    allowed_tools = frozenset(["shell", "search", "read", "ipython", "patch"])
     def act(
         self, 
         model: str, 
@@ -89,7 +90,6 @@ Now I'll read the explanation provided by the user.
         ]
 
         # Tools
-        allowlist = frozenset(["gh", "search", "read", "ipython", "patch"])
         codebase_context = ""
         for file, content in context["read_cache.json"].items():
             codebase_context += f"{file}:\n{content}\n" + "---" * 10 + "\n"
@@ -98,7 +98,7 @@ Now I'll read the explanation provided by the user.
             tool_format=tool_format,
             model=model,
             prompt=f"Codebase context:\n{codebase_context}\n\nWrite and run one unit test at a time.",
-            allowlist=allowlist,
+            allowlist=self.allowed_tools,
             initial_msgs=init_messages,
             repo_dir=repo_dir,
             log_dir=log_dir,
