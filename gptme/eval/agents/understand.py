@@ -10,7 +10,16 @@ from gptme.tools.read import save_file_read_cache
 from swebench.harness.constants import SWEbenchInstance
 
 class Understand:
-    def act(self, model: str, instance: SWEbenchInstance, repo_dir: str, log_dir: str, max_turns: int | None = None):
+    def act(
+        self, 
+        model: str, 
+        instance: SWEbenchInstance, 
+        repo_dir: str, 
+        log_dir: str, 
+        max_turns: int | None = None,
+        interactive: bool = False,
+        **kwargs
+    ):
         # Environment variables
         os.environ["ALLOW_EDIT"] = "understanding.md"
         os.environ["POST_PATCH_MSG"] = f"Are you sure your explanation and questions are relevant to the issue? If you have checked, please continue."
@@ -76,6 +85,7 @@ That looks correct! Now I'll start gathering context.
             log_dir=log_dir,
             max_turns=max_turns,
             branch="understand",
+            interactive=interactive,
         )
         files = {}
         understanding_file = Path(repo_dir) / "understanding.md"

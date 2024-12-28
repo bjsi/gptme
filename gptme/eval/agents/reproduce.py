@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 from typing import Dict
 
 from gptme import Message
@@ -10,30 +11,22 @@ from gptme.tools.file_ctx import FileContext
 from swebench.harness.constants import SWEbenchInstance
 
 class Reproduce:
-    def act(self, model: str, instance: SWEbenchInstance, repo_dir: str, log_dir: str, context: Dict[str, str]):
+    def act(
+        self, 
+        model: str, 
+        instance: SWEbenchInstance, 
+        repo_dir: str, 
+        log_dir: str, 
+        context: Dict[str, str],
+        **kwargs
+    ):
         os.environ["DISABLE_MEMORY"] = "1"
         os.environ["ALLOW_EDIT"] = "check.py"
         os.environ["POST_PATCH_MSG"] = "1) Please only write and run one test at a time. 2) If you need more context, use the `read` or `search` tools."
         os.environ["PATCH_REQUEST_MSG"] = "Please only write and run one test at a time."
 
         # Initial check.py content
-        init_check_py = """import sys
-import io
-from contextlib import redirect_stdout
-import pytest
-
-@pytest.fixture
-def setup():
-    # Set up any necessary objects or configurations
-    pass
-
-@pytest.fixture
-def teardown():
-    # Clean up after each test
-    yield
-    # Cleanup code here
-    pass
-"""
+        init_check_py = ""
         # Create initial file context
         check_file_ctx = FileContext(content=init_check_py)
         check_file_ctx.show(line_range=(1, -1))
@@ -41,11 +34,11 @@ def teardown():
         tool_format = "xml"
         
         # User prompt
-        user_prompt = """You are a code explanation checker.
-- Given an explanation of the behavior of part of a codebase in `understanding.md`, your task is to check whether the explanation is correct.
+        user_prompt = """You are a bug reproducer.
+- Given an explanation of the behavior of part of a codebase in `understanding.md`, your task is to write and run unit tests in `check.py` to reproduce the bugs explained in the issue.
 - Start by setting up the `check.py` file with the necessary boilerplate to run tests using pytest.
 - Read the explanation and code provided by the user.
-- For each bullet point in the explanation, write and run a unit test in `check.py` to check whether the explanation is correct.
+- Write and run unit tests in `check.py` to reproduce the bugs explained in the issue.
 - If you need extra context, use the `read` and `search` tools.
 - Correct any inaccuracies or omissions in the `understanding.md` file as you go.
 
@@ -74,9 +67,16 @@ Now I'll read the explanation provided by the user.
 {ToolUse("ipython", [], 'read("understanding.md")').to_output(tool_format)}
 """
         
-        understanding_file_ctx = FileContext(content=context["understanding.md"])
+        understanding_content = context["understanding.md"]
+        lines = understanding_content.split("\n")
+        idx = -1
+        for i, line in enumerate(lines):
+            if re.match(r"^#.*question", line, re.IGNORECASE):
+                idx = i
+                break
+        understanding_content = "\n".join(lines[:idx + 1])
+        understanding_file_ctx = FileContext(content=understanding_content)
         understanding_file_ctx.show(line_range=(1, -1))
-
         system_msg = f"""{understanding_file_ctx.stringify()}"""
 
         # Create initial messages list
@@ -97,7 +97,7 @@ Now I'll read the explanation provided by the user.
         act(
             tool_format=tool_format,
             model=model,
-            prompt=f"Codebase context:\n{codebase_context}",
+            prompt=f"Codebase context:\n{codebase_context}\n\nWrite and run one unit test at a time.",
             allowlist=allowlist,
             initial_msgs=init_messages,
             repo_dir=repo_dir,

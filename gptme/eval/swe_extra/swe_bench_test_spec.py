@@ -127,6 +127,7 @@ class TestSpec:
         script = "\n".join(self.reset_repo_script_list)
         print(f"Running script: {script}")
         res = subprocess.run(script, shell=True)
+        return res.returncode == 0
 
     def eval_repo(self):
         script = "\n".join(self.eval_script_list)
@@ -273,7 +274,7 @@ def make_eval_script_list(instance, install, venv_name, repo_directory, base_com
     return eval_commands
 
 
-def make_test_spec(instance: SWEbenchInstance) -> TestSpec:
+def make_test_spec(instance: SWEbenchInstance, repo_directory: str | None = None) -> TestSpec:
     if isinstance(instance, TestSpec):
         return instance
         
@@ -286,15 +287,16 @@ def make_test_spec(instance: SWEbenchInstance) -> TestSpec:
     fail_to_pass = instance["FAIL_TO_PASS"]
 
     venv_name = "env"
-    run_id = uuid.uuid4().hex[:8]
-    repo_directory = f"/tmp/repos/{instance_id}-{run_id}"
+    if not repo_directory:
+        run_id = uuid.uuid4().hex[:8]
+        repo_directory = f"/tmp/repos/{instance_id}-{run_id}"
     install = MAP_VER_TO_INSTALL[repo][version]
 
     repo_script_list = make_repo_script_list(instance, install, repo, repo_directory, base_commit, venv_name)
     eval_script_list = make_eval_script_list(
         instance, install, venv_name, repo_directory, base_commit, test_patch
     )
-    reset_repo_script_list = [f"git reset --hard {base_commit}"]
+    reset_repo_script_list = [f"cd {repo_directory}", f"git reset --hard {base_commit}"]
     return TestSpec(
         instance_id=instance_id,
         repo=repo,
@@ -307,7 +309,11 @@ def make_test_spec(instance: SWEbenchInstance) -> TestSpec:
         PASS_TO_PASS=pass_to_pass,
     )
 
-def instance_to_trajectory_info(instance: SWEbenchInstance, model_name: str, target = False) -> SWEBenchInfo:
+def instance_to_trajectory_info(instance: SWEbenchInstance, model_name: str, target = False, repo_dir: str | None = None, log_dir: str | None = None) -> SWEBenchInfo:
+    if log_dir:
+        info = SWEBenchInfo.load_from_log_dir(log_dir)
+        if info is not None:
+            return info
     return SWEBenchInfo(
         instance_id=instance["instance_id"],
         model_name=model_name,
@@ -315,4 +321,5 @@ def instance_to_trajectory_info(instance: SWEbenchInstance, model_name: str, tar
         exit_status=None,
         generated_patch=None,
         eval_logs=None,
+        repo_dir=repo_dir,
     )

@@ -47,6 +47,7 @@ class SWEBenchInfo:
     eval_logs: str | None = None
     artifacts: dict[str, str] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
+    repo_dir: str | None = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary format matching SWE-bench dataset."""
@@ -59,6 +60,7 @@ class SWEBenchInfo:
             "eval_logs": self.eval_logs,
             "timestamp": self.timestamp.isoformat(),
             "artifacts": self.artifacts,
+            "repo_dir": self.repo_dir,
         }
 
     @classmethod

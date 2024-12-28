@@ -8,7 +8,14 @@ from gptme.tools.file_ctx import FileContext
 from swebench.harness.constants import SWEbenchInstance
 
 class Fix:
-    def act(self, model: str, instance: SWEbenchInstance, repo_dir: str, log_dir: str, **kwargs):
+    def act(
+          self,
+          model: str,
+          instance: SWEbenchInstance,
+          repo_dir: str,
+          log_dir: str,
+          **kwargs
+        ):
         tool_format = "xml"
         
         # User prompt
