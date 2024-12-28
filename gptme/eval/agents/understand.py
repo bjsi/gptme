@@ -4,6 +4,7 @@ import json
 
 from gptme import Message
 from gptme.eval.agents.act import act
+from gptme.logmanager import SWEBenchInfo
 from gptme.tools.base import ToolUse
 from gptme.tools.file_ctx import FileContext
 from gptme.tools.read import save_file_read_cache
@@ -20,6 +21,7 @@ class Understand:
         log_dir: str, 
         max_turns: int | None = None,
         interactive: bool = False,
+        info: SWEBenchInfo | None = None,
         **kwargs
     ):
         # Environment variables
@@ -94,4 +96,5 @@ That looks correct! Now I'll start gathering context.
         save_file_read_cache(ignore_files=["understanding.md", "read_cache.json"])
         read_file_json = Path(repo_dir) / "read_cache.json"
         with open(read_file_json, "r") as f: files.update({"read_cache.json": json.load(f)})
-        return files
+        info.artifacts.update(files)
+        info.save_to_log_dir(log_dir)

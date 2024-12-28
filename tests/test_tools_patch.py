@@ -1,4 +1,5 @@
 from gptme.tools.patch import patch
+from gptme.tools.file_ctx import FileContext
 
 def test_patch_edge_cases(temp_file):
     content = """line1
@@ -224,3 +225,133 @@ def test_patch_replace_middle_to_end(temp_file):
         list(patch(f, (3, -1), "new_line1\nnew_line2"))
         with open(f, encoding="utf-8") as f:
             assert f.read() == "line1\nline2\nnew_line1\nnew_line2"
+
+
+def test_patch_preserve_indentation(temp_file):
+    """Test that indentation is preserved when patching Python code."""
+    content = """def outer_function():
+    def inner_function():
+        return 42
+    
+    value = inner_function()
+    return value"""
+    
+    with temp_file(content) as f:
+        # Replace the inner function body
+        list(patch(f, (3, 3), "        return 100"))
+        with open(f, encoding="utf-8") as f:
+            assert f.read() == """def outer_function():
+    def inner_function():
+        return 100
+    
+    value = inner_function()
+    return value"""
+
+def test_patch_mixed_indentation(temp_file):
+    """Test patching with mixed indentation styles."""
+    content = """class MyClass:
+    def method_one(self):
+        print('one')
+\tdef method_two(self):
+\t    print('two')"""
+    
+    with temp_file(content) as f:
+        # Replace method_one body
+        list(patch(f, (3, 3), "        print('new one')"))
+        with open(f, encoding="utf-8") as f:
+            assert f.read() == """class MyClass:
+    def method_one(self):
+        print('new one')
+\tdef method_two(self):
+\t    print('two')"""
+
+def test_patch_empty_lines_with_spaces(temp_file):
+    """Test that empty lines with spaces/tabs are preserved."""
+    content = """def function():
+        x = 1
+    
+        y = 2
+            
+        return x + y"""
+    
+    with temp_file(content) as f:
+        # Replace middle line
+        list(patch(f, (4, 4), "        z = 3"))
+        with open(f, encoding="utf-8") as f:
+            assert f.read() == """def function():
+        x = 1
+    
+        z = 3
+            
+        return x + y"""
+
+
+def test_patch_display_indentation(temp_file):
+    """Test that indented code is displayed correctly in patch messages."""
+    content = """def example():
+    if True:
+        print('hello')
+        print('world')"""
+    
+    with temp_file(content) as f:
+        messages = list(patch(f, (3, 4), "        print('patched')\n        print('message')"))
+        
+        # Find the message showing the updated region
+        update_msg = next(msg for msg in messages if "Updated region" in msg.content)
+        
+        # The displayed text should preserve indentation with line numbers
+        expected_lines = [
+            "Updated region:",
+            "...⋮...",
+            "  3│        print('patched')",
+            "  4│        print('message')"
+        ]
+        for line in expected_lines:
+            assert line in update_msg.content
+
+def test_patch_display_mixed_indentation(temp_file):
+    """Test that mixed indentation is displayed correctly in patch messages."""
+    content = """class Example:
+    def method(self):
+\t    x = 1
+\t    y = 2"""
+    
+    with temp_file(content) as f:
+        messages = list(patch(f, (3, 4), "\t    a = 3\n\t    b = 4"))
+        
+        update_msg = next(msg for msg in messages if "Updated region" in msg.content)
+        
+        # The displayed text should preserve mixed indentation with line numbers
+        expected_lines = [
+            "Updated region:",
+            "...⋮...",
+            "  3│\t    a = 3",
+            "  4│\t    b = 4"
+        ]
+        for line in expected_lines:
+            assert line in update_msg.content
+
+def test_patch_display_empty_indented_lines(temp_file):
+    """Test that empty indented lines are displayed correctly in patch messages."""
+    content = """def example():
+    def inner():
+        
+        x = 1
+        
+        y = 2"""
+    
+    with temp_file(content) as f:
+        messages = list(patch(f, (3, 5), "        \n        z = 3\n        "))
+        
+        update_msg = next(msg for msg in messages if "Updated region" in msg.content)
+        
+        # The displayed text should preserve empty indented lines with line numbers
+        expected_lines = [
+            "Updated region:",
+            "...⋮...",
+            "  3│        ",
+            "  4│        z = 3",
+            "  5│        "
+        ]
+        for line in expected_lines:
+            assert line in update_msg.content

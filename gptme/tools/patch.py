@@ -215,29 +215,6 @@ def allow_edit(file_path: str) -> bool:
             return True
     return False
 
-def request_to_patch(file_path: str, region: tuple[int, int], patch_description: str) -> str:
-    global _requested
-    _requested = patch_description
-    if not allow_edit(file_path):
-        return f"You are not allowed to edit this file.\nYou are allowed to edit:\n{'\n'.join(os.environ.get('ALLOW_EDIT').split(','))}"
-    if not os.path.exists(file_path):
-        output = ""
-        if os.environ.get("PATCH_REQUEST_MSG"): output += f"{os.environ.get('PATCH_REQUEST_MSG')}\n"
-        output += "Approved creation of new file."
-        return f"{output}"
-    ctx = FileContext(file_path)
-    if region[1] == -1: region = (region[0], len(ctx.lines))
-    # if region[0] == -1: region = (len(ctx.lines), region[1])
-    ctx.show(line_range=region, scope="line", parents="none")
-    patch_region = ctx.stringify()
-    reminders = "Is this the correct region to overwrite? If not, use `search` or `read` to find the correct region."
-    if os.environ.get("PATCH_REQUEST_MSG"): reminders += f"\n{os.environ.get('PATCH_REQUEST_MSG')}"
-    return f"""
-Approved '{patch_description}' within region:
-{patch_region}
-{reminders}
-""".strip()
-
 def execute_patch(
     updated_code: str | None,
     args: list[str] | None,
@@ -274,16 +251,11 @@ def execute_patch(
         allow_edit=True,
     )
 
-functions = [request_to_patch, revert_to]
-if not os.environ.get("REQUEST_TO_PATCH"):
-    functions.remove(request_to_patch)
-
 tool = ToolSpec(
     name="patch",
     desc="Apply a patch to a file",
     instructions=instructions,
     examples=examples,
-    # functions=functions,
     execute=execute_patch,
     block_types=["patch"],
     parse_args=lambda s: [s.split()[0], " ".join(s.split()[1:])],

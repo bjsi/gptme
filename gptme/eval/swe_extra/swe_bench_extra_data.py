@@ -1,4 +1,3 @@
-from functools import cache
 from typing import cast
 from datasets import load_dataset
 import pandas as pd
@@ -211,8 +210,8 @@ def load_instance_by_id(instance_id: str) -> SWEbenchInstance:
     return issue_to_task_instance(issues_df[issues_df['instance_id'] == instance_id])
 
 def get_cache_path():
-    # Store cache in the same directory as this file
-    return Path(__file__).parent / "top_50_cache.json"
+    # Store cache in the same directory as this file, using pickle extension
+    return Path("top_50_cache.pkl")
 
 def load_top_50_easiest_task_instances():
     cache_path = get_cache_path()
@@ -220,10 +219,8 @@ def load_top_50_easiest_task_instances():
     # Try to load from cache first
     if cache_path.exists():
         try:
-            with open(cache_path, 'r') as f:
-                cached_data = json.load(f)
-            # Convert the cached data back to a DataFrame
-            cached_df = pd.DataFrame(cached_data)
+            # Use pandas pickle read instead of JSON
+            cached_df = pd.read_pickle(cache_path)
             return issues_to_task_instances(cached_df)
         except Exception as e:
             print(f"Failed to load cache: {e}")
@@ -232,10 +229,9 @@ def load_top_50_easiest_task_instances():
     issues_df = load_swe_bench_extra_issues()
     top_50_easiest = filter_top_50_easiest_issues(issues_df)
     
-    # Save to cache for future use
+    # Save to cache using pandas pickle
     try:
-        with open(cache_path, 'w') as f:
-            json.dump(top_50_easiest.to_dict(orient='records'), f)
+        top_50_easiest.to_pickle(cache_path)
     except Exception as e:
         print(f"Failed to save cache: {e}")
     

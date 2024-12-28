@@ -177,7 +177,7 @@ def chat(
         #  - non-interactive
         #  - no executable block in last assistant message
         # then exit
-        elif not interactive:
+        elif not interactive and manager.log.messages[-1].role == "assistant":
             logger.debug("Non-interactive and exhausted prompts, exiting")
             break
 

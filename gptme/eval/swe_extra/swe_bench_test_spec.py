@@ -51,7 +51,6 @@ def get_requirements_by_commit(repo: str, commit: str) -> str:
         [line.strip().startswith(x) for x in ["-e .", "#", ".[test"]]
     )
 
-
     for line in lines.split("\n"):
         if line.strip().startswith("-r"):
             # Handle recursive requirements

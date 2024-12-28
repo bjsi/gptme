@@ -15,6 +15,9 @@ _cache: dict[str, FileContext] = {} # file -> FileContext
 def reset_file_read_cache():
    _cache.clear()
 
+def get_file_read_cache():
+   return _cache
+
 def save_file_read_cache(ignore_files: Optional[list[str]] = None):
    stringified = {k: v.stringify() for k, v in _cache.items() if k not in ignore_files}
    with open("read_cache.json", "w") as f:

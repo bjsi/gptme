@@ -6,6 +6,7 @@ from typing import Dict
 from gptme import Message
 from gptme.eval.agents.act import act
 from gptme.eval.swe_extra.swe_bench_extra_data import load_top_50_easiest_task_instances
+from gptme.logmanager import SWEBenchInfo
 from gptme.tools.base import ToolUse
 from gptme.tools.file_ctx import FileContext
 from swebench.harness.constants import SWEbenchInstance
@@ -18,7 +19,7 @@ class Reproduce:
         instance: SWEbenchInstance, 
         repo_dir: str, 
         log_dir: str, 
-        context: Dict[str, str],
+        info: SWEBenchInfo,
         **kwargs
     ):
         os.environ["DISABLE_MEMORY"] = "1"
@@ -68,14 +69,14 @@ Now I'll read the explanation provided by the user.
 {ToolUse("ipython", [], 'read("understanding.md")').to_output(tool_format)}
 """
         
-        understanding_content = context["understanding.md"]
+        understanding_content = info.artifacts["understanding.md"]
         lines = understanding_content.split("\n")
         idx = -1
         for i, line in enumerate(lines):
             if re.match(r"^#.*question", line, re.IGNORECASE):
                 idx = i
                 break
-        understanding_content = "\n".join(lines[:idx + 1])
+        understanding_content = "\n".join(lines[:idx])
         understanding_file_ctx = FileContext(content=understanding_content)
         understanding_file_ctx.show(line_range=(1, -1))
         system_msg = f"""{understanding_file_ctx.stringify()}"""
@@ -91,7 +92,7 @@ Now I'll read the explanation provided by the user.
 
         # Tools
         codebase_context = ""
-        for file, content in context["read_cache.json"].items():
+        for file, content in info.artifacts["read_cache.json"].items():
             codebase_context += f"{file}:\n{content}\n" + "---" * 10 + "\n"
 
         act(
@@ -108,9 +109,5 @@ Now I'll read the explanation provided by the user.
         files = {}
         check_file = Path(repo_dir) / "check.py"
         with open(check_file) as f: files["check.py"] = f.read()
-        return files
-    
-
-if __name__ == "__main__":
-    context = {"understanding.md": "test", "read_cache.json": "None. Please search yourself."}
-    instance = load_top_50_easiest_task_instances()[0]
+        info.artifacts.update(files)
+        info.save_to_log_dir(log_dir)
