@@ -14,6 +14,7 @@ from tempfile import TemporaryDirectory
 from typing import (
     Any,
     Literal,
+    Optional,
     TextIO,
     TypeAlias,
 )
@@ -44,6 +45,7 @@ class SWEBenchInfo:
     exit_status: str | None = None
     generated_patch: str | None = None
     eval_logs: str | None = None
+    artifacts: dict[str, str] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict:
@@ -55,7 +57,8 @@ class SWEBenchInfo:
             "exit_status": self.exit_status,
             "generated_patch": self.generated_patch,
             "eval_logs": self.eval_logs,
-            "timestamp": self.timestamp.isoformat()
+            "timestamp": self.timestamp.isoformat(),
+            "artifacts": self.artifacts,
         }
 
     @classmethod
@@ -66,12 +69,24 @@ class SWEBenchInfo:
             d = d.copy()  # Make a copy to avoid modifying input
             d["timestamp"] = datetime.fromisoformat(d["timestamp"])
         return cls(**d)
+    
+    def load_from_log_dir(cls, log_dir: PathLike) -> Optional["SWEBenchInfo"]:
+        log_dir = Path(log_dir)
+        swe_bench_info_file = log_dir / "swe_bench_info.json"
+        if not swe_bench_info_file.exists(): return None
+        with swe_bench_info_file.open() as f:
+            return cls.from_dict(json.load(f))
+    
+    def save_to_log_dir(self, log_dir: PathLike) -> None:
+        log_dir = Path(log_dir)
+        swe_bench_info_file = log_dir / "swe_bench_info.json"
+        swe_bench_info_file.parent.mkdir(parents=True, exist_ok=True)
+        json.dump(self.to_dict(), swe_bench_info_file.open("w"), indent=2)
 
 
 @dataclass(frozen=True)
 class Log:
     messages: list[Message] = field(default_factory=list)
-    swe_bench_info: SWEBenchInfo | None = None
 
     def __getitem__(self, key):
         return self.messages[key]
@@ -97,25 +112,13 @@ class Log:
         gen = _gen_read_jsonl(path)
         if limit:
             gen = islice(gen, limit)  # type: ignore
-        
-        # Try to load SWE-bench info if it exists
-        swe_bench_info = None
-        swe_bench_info_file = Path(path).parent / "swe_bench_info.json"
-        if swe_bench_info_file.exists():
-            with swe_bench_info_file.open() as f:
-                swe_bench_info = SWEBenchInfo.from_dict(json.load(f))
-        
-        return Log(messages=list(gen), swe_bench_info=swe_bench_info)
+        return Log(messages=list(gen))
 
     def write_jsonl(self, path: PathLike) -> None:
         """Write messages to JSONL and SWE-bench info to separate JSON file."""
         with open(path, "w") as file:
             for msg in self.messages:
                 file.write(json.dumps(msg.to_dict()) + "\n")
-        if self.swe_bench_info:
-            swe_bench_info_file = Path(path).parent / "swe_bench_info.json"
-            swe_bench_info_file.parent.mkdir(parents=True, exist_ok=True)
-            json.dump(self.swe_bench_info.to_dict(), swe_bench_info_file.open("w"), indent=2)
 
     def print(self, show_hidden: bool = False):
         print_msg(self.messages, oneline=False, show_hidden=show_hidden)
@@ -124,14 +127,6 @@ class Log:
         d = {
             "messages": [msg.to_dict() for msg in self.messages],
         }
-        if self.swe_bench_info:
-            d["swe_bench_info"] = {
-                "instance_id": self.swe_bench_info.instance_id,
-                "model_name": self.swe_bench_info.model_name,
-                "target": self.swe_bench_info.target,
-                "trajectory": self.swe_bench_info.trajectory,
-                "timestamp": self.swe_bench_info.timestamp.isoformat(),
-            }
         return d
 
 
@@ -183,9 +178,11 @@ class LogManager:
         if self.logdir / "conversation.jsonl":
             _branch = "main"
             if _branch not in self._branches:
-                self._branches[_branch] = Log.read_jsonl(
-                    self.logdir / "conversation.jsonl"
-                )
+                # self._branches[_branch] = Log.read_jsonl(
+                #     self.logdir / "conversation.jsonl"
+                # )
+                # WARNING: breaks the branch system
+                self._branches[_branch] = Log([])
         for file in self.logdir.glob("branches/*.jsonl"):
             if file.name == self.logdir.name:
                 continue
@@ -252,7 +249,7 @@ class LogManager:
         query = f"Planning:\n{planning_match.group(1)}"
         print("searching for memories...")
         print(query)
-        results = search_memory(query, k=2, tool_format=self.tool_format)
+        results = search_memory(query, k=2, tool_format=self.tool_format) if not os.environ.get("DISABLE_MEMORY") else []
         print(f"found {len(results)} memories")
         memories = ""
         if results:
@@ -338,7 +335,6 @@ class LogManager:
         branch: str = "main",
         create: bool = False,
         lock: bool = True,
-        swe_bench_info: SWEBenchInfo | None = None,
         **kwargs,
     ) -> "LogManager":
         """Loads a conversation log."""
@@ -361,7 +357,7 @@ class LogManager:
             if create:
                 # logger.debug(f"Creating new logfile {logfile}")
                 Path(logfile).parent.mkdir(parents=True, exist_ok=True)
-                Log(messages=[], swe_bench_info=swe_bench_info).write_jsonl(logfile)
+                Log(messages=[]).write_jsonl(logfile)
             else:
                 raise FileNotFoundError(f"Could not find logfile {logfile}")
 

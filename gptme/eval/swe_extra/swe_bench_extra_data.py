@@ -1,8 +1,9 @@
+from functools import cache
 from typing import cast
 from datasets import load_dataset
 import pandas as pd
 import matplotlib.pyplot as plt
-from gptme.logmanager import Log, get_user_conversations
+from gptme.logmanager import Log, SWEBenchInfo, get_user_conversations
 from swebench.harness.constants import SWEbenchInstance
 from datasets import Dataset
 
@@ -15,15 +16,16 @@ def load_my_trajectories():
     # Load all logs with SWE-bench info
     for conv in get_user_conversations():
         log = Log.read_jsonl(conv.path)
-        if log.swe_bench_info:
+        swe_bench_info = SWEBenchInfo.load_from_log_dir(conv.path)
+        if swe_bench_info:
             trajectories.append({
-                'instance_id': log.swe_bench_info.instance_id,
-                'model_name': log.swe_bench_info.model_name,
-                'target': int(log.swe_bench_info.target),  # Convert bool to int for analysis
-                'trajectory': log.swe_bench_info.trajectory,
-                'exit_status': log.swe_bench_info.exit_status,
-                'generated_patch': log.swe_bench_info.generated_patch,
-                'eval_logs': log.swe_bench_info.eval_logs
+                'instance_id': swe_bench_info.instance_id,
+                'model_name': swe_bench_info.model_name,
+                'target': int(swe_bench_info.target),  # Convert bool to int for analysis
+                'trajectory': [m.to_dict() for m in log.messages],
+                'exit_status': swe_bench_info.exit_status,
+                'generated_patch': swe_bench_info.generated_patch,
+                'eval_logs': swe_bench_info.eval_logs
             })
     
     return pd.DataFrame(trajectories) if trajectories else pd.DataFrame()
@@ -32,6 +34,7 @@ def load_nebius_trajectories():
     dataset = load_dataset("nebius/SWE-agent-trajectories", split="train")
     return dataset.to_pandas()
 
+@cache
 def load_swe_bench_extra_issues():
     dataset = load_dataset("nebius/SWE-bench-extra", split="train")
     return dataset.to_pandas()
@@ -199,7 +202,7 @@ def issues_to_task_instances(issues_df):
     dataset = Dataset.from_pandas(issues_df)
     return [cast(SWEbenchInstance, instance) for instance in dataset]
 
-
+@cache
 def load_top_50_easiest_task_instances():
     issues_df = load_swe_bench_extra_issues()
     top_50_easiest = filter_top_50_easiest_issues(issues_df)

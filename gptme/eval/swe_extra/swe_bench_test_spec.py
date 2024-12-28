@@ -109,6 +109,7 @@ class TestSpec:
     repo: str
     version: str
     repo_script_list: str
+    reset_repo_script_list: str
     eval_script_list: str
     FAIL_TO_PASS: list[str]
     PASS_TO_PASS: list[str]
@@ -121,11 +122,17 @@ class TestSpec:
     @property
     def install_repo_script(self):
         return "\n".join(["#!/bin/bash", "set -euxo pipefail"] + self.repo_script_list) + "\n"
+    
+    def reset_repo(self):
+        script = "\n".join(self.reset_repo_script_list)
+        print(f"Running script: {script}")
+        res = subprocess.run(script, shell=True)
 
     def eval_repo(self):
         script = "\n".join(self.eval_script_list)
         print(f"Running script: {script}")
         res = subprocess.run(script, shell=True)
+        return res.returncode == 0
     
     def setup_repo(self):
         script = "\n".join(self.repo_script_list)
@@ -287,23 +294,24 @@ def make_test_spec(instance: SWEbenchInstance) -> TestSpec:
     eval_script_list = make_eval_script_list(
         instance, install, venv_name, repo_directory, base_commit, test_patch
     )
-
+    reset_repo_script_list = [f"git reset --hard {base_commit}"]
     return TestSpec(
         instance_id=instance_id,
         repo=repo,
         repo_dir=repo_directory,
         repo_script_list=repo_script_list,
         eval_script_list=eval_script_list,
+        reset_repo_script_list=reset_repo_script_list,
         version=version,
         FAIL_TO_PASS=fail_to_pass,
         PASS_TO_PASS=pass_to_pass,
     )
 
-def instance_to_trajectory_info(instance: SWEbenchInstance, model_name: str) -> SWEBenchInfo:
+def instance_to_trajectory_info(instance: SWEbenchInstance, model_name: str, target = False) -> SWEBenchInfo:
     return SWEBenchInfo(
         instance_id=instance["instance_id"],
         model_name=model_name,
-        target=False,
+        target=target,
         exit_status=None,
         generated_patch=None,
         eval_logs=None,

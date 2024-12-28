@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 import sys
 import time
@@ -74,9 +75,10 @@ def _chat_complete(
     else:
         raise ValueError("LLM not initialized")
 
-_stop = ["</planning>"]
+_stop = ["</planning>"] if not os.environ.get("DISABLE_MEMORY") else None
 
 def set_stop(stop: List[str] | None = None):
+    if os.environ.get("DISABLE_MEMORY"): return
     global _stop
     _stop = stop
     print(f"set stop to {_stop}")

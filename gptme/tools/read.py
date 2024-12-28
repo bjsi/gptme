@@ -1,25 +1,43 @@
+import json
 import os
 from typing import Optional
-from gptme.message import Message
 from gptme.tools.base import ToolSpec, ToolUse
 from gptme.tools.file_ctx import FileContext
 
 
 instructions = "Read the content in the given file."
 
+# stores all context accessed through `read` calls
+# filled up during the `Understand` step
+# passed to the `Reproduce` and `Fix` steps
+_cache: dict[str, FileContext] = {} # file -> FileContext
+
+def reset_file_read_cache():
+   _cache.clear()
+
+def save_file_read_cache(ignore_files: Optional[list[str]] = None):
+   stringified = {k: v.stringify() for k, v in _cache.items() if k not in ignore_files}
+   with open("read_cache.json", "w") as f:
+      json.dump(stringified, f)
+
 def read(fp: str, line_range: Optional[list[int]] = None, query: Optional[str] = None, names: Optional[list[str]] = None):
-   file_ext = os.path.splitext(fp)[1]
-   if file_ext != ".py":
-      with open(fp, "r") as f:
-          return f.read() # just cat non-python files
-   ctx = FileContext(fp)
-   ctx = ctx.show_skeleton() # always include skeleton
-   if not line_range and not query and not names: ctx.show_skeleton()
-   elif line_range: ctx.show(line_range=line_range, scope="full", parents="all")
-   elif query: ctx.show(query=query, scope="full", parents="all") # not documneted
-   elif names: ctx.show(names=names, scope="full", parents="all")
-   ctx_string = ctx.stringify()
-   return f"{fp}\n{ctx_string}\nUse further calls to `read` or `search` to expand more context if required."
+  file_ext = os.path.splitext(fp)[1]
+  ctx = FileContext(fp)
+  if file_ext != ".py":
+     ctx.show_all() # just cat non-python files
+  else:
+    ctx = ctx.show_skeleton() # always include skeleton
+    if not line_range and not query and not names: ctx.show_skeleton()
+    elif line_range: ctx.show(line_range=line_range, scope="full", parents="all")
+    elif query: ctx.show(query=query, scope="full", parents="all") # not documneted
+    elif names: ctx.show(names=names, scope="full", parents="all")
+  # udpate cache
+  if fp not in _cache: _cache[fp] = ctx
+  else: _cache[fp].merge(ctx)
+  # output
+  ctx_string = ctx.stringify()
+  output = f"{fp}\n{ctx_string}\nUse further calls to `read` or `search` to expand more context if required."
+  return output
 
 def examples(tool_format):
     return f"""
@@ -45,5 +63,4 @@ tool = ToolSpec(
 )
 
 if __name__ == "__main__":
-    print(read('hello.py'))
     print(read('gptme/cli.py', line_range=[140, 160]))

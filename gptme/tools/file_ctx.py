@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Literal, Optional
+from typing import Literal, Optional
 import tree_sitter_python as tspython
 from tree_sitter import Language, Node, Parser
 
@@ -24,7 +24,6 @@ class FileContext:
         self.tree = Parser(PY_LANGUAGE).parse(bytes(self.code, "utf8"))
         self.root_node = self.tree.root_node
         self.show_indices = set()
-        self.comments: Dict[int, str] = {}
         self.nodes = [[] for _ in range(len(self.lines) + 1)]
         self.scopes = [set() for _ in range(len(self.lines) + 1)]
         self.walk_tree(self.root_node)
@@ -123,12 +122,12 @@ class FileContext:
         self.show(query=self.import_query(), scope="full", parents="none")
         return self
     
-    def merge(self, other: "FileContext"):
-        self.show_indices.update(other.show_indices)
+    def show_all(self):
+        self.show(line_range=(1, -1))
         return self
     
-    def add_comments(self, line_comment_map: Dict[int, str]):
-        self.comments.update(line_comment_map)
+    def merge(self, other: "FileContext"):
+        self.show_indices.update(other.show_indices)
         return self
     
     def walk_tree(self, node, depth=0):
@@ -143,7 +142,7 @@ class FileContext:
             self.walk_tree(child, depth + 1)
         return start_line, end_line
     
-    def stringify(self, line_number=True, comment_prefix=""):
+    def stringify(self, line_number=True):
         if not self.show_indices: return ""
         small_gap_size = 2 # close small gaps
         closed_show = set(self.show_indices)
@@ -162,13 +161,6 @@ class FileContext:
                     dots = False
                 continue
             spacer = "│"
-            comment = self.comments.get(i + 1)
-            if comment:
-                comment_lines = [c.replace("#", "").replace("TODO:", "").strip() for c in comment.strip().splitlines()]
-                border_spacing = " " * len(f"{i+1:3}")
-                whitespace = line[:len(line) - len(line.lstrip())]
-                for j, comment in enumerate(comment_lines):
-                    output += f"{border_spacing}{spacer}{whitespace}#{comment_prefix if j == 0 else ""} {comment}\n"
             line_output = f"{spacer}{line}"
             if line_number: line_output = f"{i+1:3}" + line_output
             output += line_output + "\n"
@@ -178,4 +170,4 @@ class FileContext:
 if __name__ == "__main__":
     context = FileContext("hello.py")
     context.show(line_range=(15, 21), scope="line", parents="none")
-    print(context.stringify(comment_prefix=" TODO(james|issue#123):"))
+    print(context.stringify())

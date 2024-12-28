@@ -149,11 +149,6 @@ The interface provides user commands that can be used to interact with the syste
     default=None,
     help="JSON list of initial messages to add after the system prompt.",
 )
-@click.option(
-    "--swe-bench-info",
-    default=None,
-    help="JSON dictionary of SWE-Bench info to add to the log.",
-)
 def main(
     prompts: list[str],
     prompt_system: str,
@@ -170,7 +165,6 @@ def main(
     resume: bool,
     workspace: str | None,
     init_messages: str | None,
-    swe_bench_info: str | None,
 ):
     show_hidden = True
     print(f"init_messages: {init_messages}")

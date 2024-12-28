@@ -7,6 +7,7 @@ from gptme.tools.file_ctx import FileContext
 
 instructions = "Use this tool to search the contents of files in the codebase."
 
+hidden_files = ["check.py", "understanding.md", "read_cache.json"]
 
 def examples(tool_format):
     return f"""
@@ -27,7 +28,12 @@ def search_basic(query: str, directory: str = "."):
     res = subprocess.run(["rga", "--line-number", "--context", "2", "--heading", "-e", query, directory], capture_output=True, text=True)
     results = res.stdout.strip()
     if not results: return "No results found."
-    return f"{results}\nYou can get more context by using the `read` tool with a line_range parameter."
+    
+    filtered_results = "\n".join(line for line in results.split("\n") 
+                               if not any(hidden in line for hidden in hidden_files))
+    
+    if not filtered_results: return "No results found."
+    return f"{filtered_results}\nYou can get more context by using the `read` tool with a line_range parameter."
 
 def parse_search_results(results: str) -> Dict[Path, List[int]]:
     parsed: Dict[str, List[int]] = {}
@@ -65,7 +71,11 @@ def search_file_names(query: str, directory: str = "."):
     p1.stdout.close()
     output = p2.communicate()[0]
     p1.wait()  # Wait for p1 to finish
-    return output.strip()
+    
+    filtered_output = "\n".join(line for line in output.strip().split("\n")
+                              if not any(hidden in line for hidden in hidden_files))
+    
+    return filtered_output
 
 def preprocess_query(query: str) -> str:
     return query.replace(".", "|") # support class.method queries
@@ -77,11 +87,13 @@ def search(query: str):
         capture_output=True,
         text=True
     ).stdout.strip()
+    
+    file_contents = "\n".join(line for line in file_contents.split("\n")
+                            if not any(hidden in line.split(":")[0] for hidden in hidden_files))
+    
     file_names = search_file_names(query, '.')
     file_name_results = f"File name matches:\n{file_names}\n" + '-' * 80 + "\n"
-    # if os.path.isfile(file_or_dir):
-    #     # If directory is a single file, prepend filename to each line
-    #     file_contents.stdout = "\n".join(f"{file_or_dir}:{line}" for line in file_contents.stdout.splitlines())
+    
     parsed = parse_search_results(file_contents)
     output = ""
     num_results = len(parsed.keys())

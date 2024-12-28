@@ -1,0 +1,3 @@
+[submodule "swe_rex"]
+	path = swe_rex
+	url = https://github.com/SWE-agent/SWE-ReX
